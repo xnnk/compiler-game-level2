@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<!--
+    是什么: HTML文档的根元素，语言设置为中文。
+    为什么: 声明这是一个HTML5文档，并指定主要语言为中文，有助于浏览器和搜索引擎正确解析。
+    如何关联: 这是整个项目的入口和骨架，承载了《实现Level1.md》中规划的所有前端技术和UI布局。
+-->
+<html lang="zh-CN">
+<head>
+    <!--
+        是什么: 文档元数据部分。
+        为什么: 定义字符集、视口设置和页面标题，确保跨设备正确显示和响应式布局。
+        如何关联: `viewport` 设置是移动端优先和响应式设计的基石，符合现代Web开发标准。
+    -->    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码编译器模拟器 v0.8.0</title>
+
+    <!--
+        是什么: 引入外部JavaScript库。
+        为什么:
+            - tailwindcss: 用于快速构建UI，实现现代化的原子化CSS布局。
+            - d3.js: 一个强大的数据可视化库，用于绘制抽象语法树(AST)。
+            - chart.js: 用于创建动态的性能图表。
+            - decimal.js: 用于处理大数运算，防止JavaScript原生Number类型的精度丢失问题。
+        如何关联:
+            - 这完全对应了《实现Level1.md》中“核心库选择”部分的技术栈规划。
+            - `decimal.js` 的使用是为了解决《研究Level1.md》中提到的“指数增长”带来的“天文数字”问题。
+    -->
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/decimal.js/decimal.min.js"></script>
+
+    <!--
+        是什么: 引入CodeMirror代码编辑器库及其相关CSS。
+        为什么: 提供一个功能强大的、带语法高亮的嵌入式代码编辑器，让玩家可以输入和查看代码。
+        如何关联: 这是实现《研究Level1.md》3.3.3节“游戏内代码编辑器”和《实现Level1.md》“代码编辑器”功能点的直接技术选型。
+    -->
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+
+
+    <!--
+        是什么: 引入外部字体 'IBM Plex Mono'。
+        为什么: 使用等宽字体来强化“编程”和“黑客”的主题感，这在代码编辑器和终端模拟中很常见。
+        如何关联: 对应《研究Level1.md》3.3.1节中提到的“广泛使用等宽字体（Monospace）”的UI设计建议。
+    -->
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /*
+            是什么: 定义全局CSS变量（自定义属性）。
+            为什么: 将颜色、字体等设计元素集中管理，方便统一修改和维护，实现主题化。
+            如何关联: 这里的颜色变量（如--accent-green, --accent-cyan）直接实现了《实现Level1.md》中“黑客美学风格指南”定义的色板。
+        */
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --border-color: #30363d;
+            --accent-green: #23d18b;
+            --accent-cyan: #39c5fe;
+            --accent-magenta: #f778ba;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        /*
+            是什么: 基础页面样式。
+            为什么: 设置全局字体、背景色和文字颜色，奠定整体视觉风格。
+            如何关联: 应用了《实现Level1.md》中定义的“黑客美学”字体和背景色。
+        */
+        body {
+            font-family: var(--font-mono);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .hacker-box {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 700;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-green);
+            color: var(--bg-primary);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 10px rgba(35, 209, 139, 0.4);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(35, 209, 139, 0.7);
+        }
+        .btn-primary:disabled {
+            background-color: #21262d;
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background-color: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(57, 197, 254, 0.4);
+        }        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(57, 197, 254, 0.7);
+        }
+
+        /* 第三阶段专属样式 */
+        .btn-mini {
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            border: none;
+            cursor: pointer;
+        }
+
+        .optimization-tech {
+            transition: all 0.3s ease;
+        }
+        .optimization-tech:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .deployment-platform {
+            transition: all 0.3s ease;
+        }
+        .deployment-platform:hover:not(.opacity-50) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        /* 第三阶段面板渐变背景 */
+        .stage3-panel {
+            background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(75, 0, 130, 0.1) 100%);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+        }        /* 性能评级样式 */
+        .performance-rating {
+            text-shadow: 0 0 10px currentColor;
+            animation: pulse-rating 2s infinite;
+        }
+        @keyframes pulse-rating {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* 标签页样式 */
+        .tab-navigation {
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: rgba(55, 65, 81, 0.8);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .tab-btn:hover {
+            background: rgba(75, 85, 99, 0.9);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(57, 197, 254, 0.4);
+        }
+        .tab-panel {
+            display: none;
+            animation: fadeInTab 0.3s ease-in-out;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        @keyframes fadeInTab {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 改进的网格布局 */
+        #stats-container {
+            display: grid;
+            gap: 1rem;
+        }
+        .stat-item {
+            background: rgba(55, 65, 81, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        .stat-item:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(57, 197, 254, 0.2);
+        }
+
+        /* 是什么: “故障艺术” (Glitch) 效果的CSS实现。
+            为什么: 这是一种非常流行的视觉风格，能极大地增强“黑客”或“赛博朋克”的主题感，让UI看起来更“酷”。
+            如何关联: 直接实现了《实现Level1.md》中“UI/UX 设计规范”里展示的`.glitch` CSS代码，是“黑客美学”的关键组成部分。
+        */
+        .glitch {
+            position: relative;
+            color: var(--accent-green);
+            text-shadow: 0 0 5px var(--accent-green);
+        }
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--accent-magenta);
+            animation: glitch-anim-1 2s infinite linear alternate-reverse;
+        }
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 var(--accent-cyan), 2px 2px var(--accent-magenta);
+            animation: glitch-anim-2 2s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim-1 { 0% { clip-path: inset(5% 0 90% 0); } 100% { clip-path: inset(80% 0 5% 0); } }
+        @keyframes glitch-anim-2 { 0% { clip-path: inset(70% 0 10% 0); } 100% { clip-path: inset(10% 0 85% 0); } }
+
+        /* 是什么: CodeMirror编辑器的样式覆盖。
+            为什么: 为了让CodeMirror的默认外观能更好地融入我们自定义的“黑客”主题。
+            如何关联: 调整编辑器样式以匹配《实现Level1.md》中定义的整体视觉风格。
+        */
+        .CodeMirror {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            height: 250px;
+            font-family: var(--font-mono);
+        }
+        .CodeMirror-gutters {
+            background: #282a36 !important; /* Dracula theme background */
+        }
+
+        /* 是什么: 词法分析后生成的“令牌”(Token)的可视化样式。
+            为什么: 通过不同颜色区分不同类型的Token（关键字、标识符等），为玩家提供清晰、直观的视觉反馈。
+            如何关联: 这是实现《实现Level1.md》中“阶段一：词法分析”里提到的“代码字符串逐个分解为彩色token块”的可视化效果。
+        */
+        #token-stream {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 10px;
+            min-height: 100px;
+        }
+        .token {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .token-KEYWORD { background-color: #ff79c6; color: black; }
+        .token-IDENTIFIER { background-color: #f8f8f2; color: black; }
+        .token-NUMBER { background-color: #f1fa8c; color: black; }
+        .token-STRING { background-color: #50fa7b; color: black; }
+        .token-OPERATOR { background-color: #8be9fd; color: black; }
+        .token-DELIMITER { background-color: #bd93f9; color: black; }        .token-UNKNOWN { background-color: #ff5555; color: white; }
+
+        /* 威望弹窗样式 */
+        .prestige-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .prestige-popup-content {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            border: 3px solid var(--accent-green);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 0 50px var(--accent-green);
+            font-family: var(--font-mono);
+        }
+
+        .prestige-summary {
+            margin: 20px 0;
+            color: var(--text-primary);
+        }
+
+        .prestige-summary p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        .close-btn {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: var(--font-mono);
+            transition: all 0.3s ease;
+        }        .close-btn:hover {
+            background: var(--accent-cyan);
+            transform: scale(1.05);
+        }
+
+        /* 购买数量选择器样式 */
+        .buy-amount-selector {
+            display: flex;
+            align-items: center;
+        }
+        .buy-amount-btn {
+            padding: 0.5rem 1rem;
+            margin: 0 2px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .buy-amount-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text-primary);
+        }
+        .buy-amount-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-color: var(--accent-cyan);
+        }
+
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<!--
+    是什么: 页面主体结构，采用Grid布局。
+    为什么: 使用Grid布局可以轻松实现复杂的响应式页面结构，在大屏幕上分为左右两栏，在小屏幕上自动堆叠。
+    如何关联: 这是《实现Level1.md》中“仪表盘布局”的宏观实现，将页面划分为左侧的交互区（编辑器）和右侧的状态/升级区。
+-->
+<div class="max-w-7xl mx-auto">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold glitch" data-text="代码编译器模拟器">代码编译器模拟器</h1>
+        <p id="version-display" class="text-sm text-gray-400 mt-2">v0.8.0 - Tabs Fix</p>
+    </header>    <main class="space-y-6">
+        <!-- 主要状态面板 - 始终可见 -->
+        <div class="hacker-box p-6">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">🖥️ 编译器状态</h2>
+            <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+        </div>
+
+        <!-- 威望面板 - 独立显示 -->
+        <div class="hacker-box p-6" id="prestige-panel" style="display: none;">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">⚡ 系统重构 (威望)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                    <p class="text-sm text-gray-400 mb-2">重构编译器核心以获得永久性加成</p>
+                    <p class="text-lg">可获得 <span id="prestige-gain-display" class="font-bold text-yellow-400">0</span> 编译器点数</p>
+                </div>
+                <button id="prestige-btn" class="btn btn-secondary">执行重构</button>
+            </div>
+        </div>
+
+        <!-- 标签页导航 -->
+        <div class="hacker-box p-6">
+            <div class="tab-navigation mb-6">
+                <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+                    <button class="tab-btn active" data-tab="upgrades">🔧 升级</button>
+                    <button class="tab-btn" data-tab="analytics">📊 分析</button>
+                    <button class="tab-btn" data-tab="stage3" id="stage3-tab" style="display: none;">🚀 代码生成</button>
+                    <button class="tab-btn" data-tab="lexer">⚙️ 词法分析</button>
+                </div>
+            </div>
+
+            <!-- 标签页内容 -->
+            <div class="tab-content">                <!-- 升级标签页 -->
+                <div id="upgrades-tab" class="tab-panel active">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">编译器升级</h2>
+                        <div class="buy-amount-selector">
+                            <span class="text-sm text-gray-400 mr-2">购买数量:</span>
+                            <button class="buy-amount-btn active" data-amount="1" onclick="game.setBuyAmount(1)">x1</button>
+                            <button class="buy-amount-btn" data-amount="10" onclick="game.setBuyAmount(10)">x10</button>
+                            <button class="buy-amount-btn" data-amount="100" onclick="game.setBuyAmount(100)">x100</button>
+                        </div>
+                    </div>
+                    <div id="upgrades-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2"></div>
+                </div>
+
+                <!-- 分析标签页 -->
+                <div id="analytics-tab" class="tab-panel">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h2 class="text-xl font-bold mb-4">性能图表</h2>
+                            <div class="relative h-64">
+                                <canvas id="performance-chart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold mb-4">抽象语法树 (AST)</h2>
+                            <div id="ast-visualization" class="w-full h-64 flex items-center justify-center border border-gray-600 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第三阶段标签页 -->
+                <div id="stage3-tab-content" class="tab-panel" style="display: none;">
+                    <h2 class="text-xl font-bold mb-4">🔧 代码生成工厂</h2>
+                    <div class="space-y-6">
+                        <!-- 代码生成流水线 -->
+                        <div class="assembly-line bg-gray-800 p-4 rounded">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                <div class="input-section text-center">
+                                    <span class="text-sm text-gray-400">AST节点</span>
+                                    <div class="resource-flow text-cyan-400 text-2xl">📊</div>
+                                </div>
+                                <div class="generation-process">
+                                    <div class="text-center">
+                                        <div class="progress-bar bg-gray-700 h-3 rounded mb-2">
+                                            <div id="code-gen-progress" class="bg-gradient-to-r from-cyan-400 to-green-400 h-full rounded transition-all"></div>
+                                        </div>
+                                        <span id="generator-type" class="text-sm text-gray-300">基础代码生成</span>
+                                    </div>
+                                </div>
+                                <div class="output-section text-center">
+                                    <span class="text-sm text-gray-400">生成代码</span>
+                                    <div class="code-blocks text-green-400 text-xl">⚡ <span id="generated-code-count">0</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 优化和性能面板 -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="optimization-panel bg-gray-800 p-4 rounded">
+                                <h3 class="text-lg font-bold mb-3 text-purple-400">🚀 优化技术树</h3>
+                                <div id="optimization-techs" class="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
+                                    <!-- 优化技术将动态生成 -->
+                                </div>
+                            </div>
+
+                            <div class="performance-dashboard bg-gray-800 p-4 rounded">
+                                <h3 class="text-lg font-bold mb-3 text-yellow-400">📊 性能仪表盘</h3>
+                                <div class="space-y-4">
+                                    <div class="performance-rating text-center">
+                                        <div id="performance-rating" class="text-3xl font-bold text-gray-400 performance-rating">F</div>
+                                        <div id="performance-score" class="text-sm text-gray-500">0 分</div>
+                                    </div>
+                                    <div class="deployment-platforms">
+                                        <h4 class="text-sm font-bold mb-2 text-orange-400">🌐 部署平台</h4>
+                                        <div id="deployment-platforms" class="grid grid-cols-2 gap-2">
+                                            <!-- 部署平台按钮将动态生成 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 词法分析标签页 - 保留但简化 -->
+                <div id="lexer-tab" class="tab-panel">
+                    <h2 class="text-xl font-bold mb-4">词法分析器</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">代码输入</label>
+                                <textarea id="code-input" class="w-full h-32 bg-gray-800 border border-gray-600 rounded p-3 text-sm font-mono"
+                                    placeholder="输入代码进行词法分析...">function hello() {
+    return "Hello World!";
+}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">令牌输出</label>
+                                <div id="token-stream" class="h-32 bg-gray-900 border border-gray-600 rounded p-3 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                        <button id="run-lexer-btn" class="btn btn-primary">🔍 执行词法分析</button>
+                        <p class="text-xs text-gray-500">💡 提示：词法分析主要用于游戏早期获取tokens，后期自动化升级后作用有限</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 开发者提示 - 只在控制台可见 -->
+    <script>
+        console.log('🎮 开发者提示：');
+        console.log('🎮 按 Ctrl + Shift + D 激活开发者模式');
+        console.log('🎮 激活后可以使用数字键快速获得资源');
+    </script>
+</div>
+
+<script>
+    // --- 配置与设置 ---
+    /*
+        是什么: 设置Decimal.js库的全局精度和舍入模式。
+        为什么: 增量游戏中的数值会变得极大，远远超过JavaScript `Number`类型的安全范围。设置高精度可确保所有计算（特别是成本和产出）的准确性。
+        如何关联: 这是实现《研究Level1.md》1.3节“指数增长”和3.2.1节“管理天文数字”的技术前提。
+    */
+    Decimal.set({ precision: 100, rounding: 4 });
+
+    // --- 游戏数据 ---
+    /*
+        是什么: 定义了所有可购买升级的核心数据。这是一个配置对象，是游戏的“蓝图”。
+        为什么: 将游戏平衡性相关的数值（如基础成本、成长率、产出）集中存放，便于调整和管理，而无需在代码逻辑中硬编码。
+        如何关联:
+            - 这段代码是《实现Level1.md》中“升级项目设计”表格的直接代码化实现。
+            - `baseCost`和`growth`直接对应了《研究Level1.md》1.3节中的指数成本公式 `Cost_next = Cost_base * (Rate_growth)^Owned`。
+            - `type`（manual, generator, converter）定义了升级的性质，体现了游戏从手动到自动（generator），再到资源转化（converter）的核心进程，这与《研究Level1.md》中描述的游戏阶段演进（词法分析 -> 语法分析）相符。
+            - `unlockThreshold`实现了《研究Level1.md》中提到的“展开式机制”，避免一次性给玩家太多信息。
+    */
+    const UPGRADE_DATA = {
+        'token-speed': { name: '词法分析器 I', description: '提升手动分词效率 (按Token数量)。', baseCost: new Decimal(25), growth: 1.25, baseOutput: new Decimal(0.1), type: 'manual' },
+        'auto-tokenizer-1': { name: '自动化分词器', description: '自动产生 Tokens。', baseCost: new Decimal(50), growth: 1.15, baseOutput: new Decimal(1), type: 'generator', resource: 'tokens' },
+        'auto-scanner-2': { name: '高速扫描器', description: '更快速的自动化分词器。', baseCost: new Decimal(500), growth: 1.18, baseOutput: new Decimal(5), type: 'generator', resource: 'tokens', unlockThreshold: new Decimal(250) },
+        'parallel-lexer-3': { name: '并行词法分析器', description: '利用多核心并行处理，大幅提升效率。', baseCost: new Decimal(8000), growth: 1.22, baseOutput: new Decimal(25), type: 'generator', resource: 'tokens', unlockThreshold: new Decimal(4000) },
+        'auto-parser-1': { name: '自动化解析器', description: '消耗 Tokens 自动构建 AST 节点。', baseCost: new Decimal(1000), growth: 1.20, baseOutput: new Decimal(0.5), type: 'converter', resource: 'astNodes', costResource: 'tokens', unlockThreshold: new Decimal(500) },
+    };    const PRESTIGE_UPGRADES = {
+        'quantumTokenizer': { name: "量子分词器", baseCost: new Decimal(10), cost: new Decimal(10), level: 0, effect: "tokens生产 × 5", requiresPrestige: 1, unlocked: false },
+        'parallelCompiler': { name: "并行编译器", baseCost: new Decimal(100), cost: new Decimal(100), level: 0, effect: "同时处理多个编译任务", requiresPrestige: 3, unlocked: false },
+        'aiOptimizer': { name: "AI优化器", baseCost: new Decimal(1000), cost: new Decimal(1000), level: 0, effect: "自动选择最优编译策略", requiresPrestige: 5, unlocked: false }
+    };
+
+    // 第三阶段：代码生成与优化 - 升级数据
+    const STAGE3_UPGRADES = {
+        'basicCodeGen': { 
+            name: "基础代码生成器", 
+            baseCost: new Decimal(100), 
+            growth: 1.2, 
+            baseOutput: new Decimal(0.1), 
+            type: 'converter', 
+            resource: 'generatedCode',
+            costResource: 'astNodes',
+            description: "将AST节点转换为基础代码",
+            unlockThreshold: new Decimal(1000)
+        },
+        'llvmCodeGen': { 
+            name: "LLVM代码生成器", 
+            baseCost: new Decimal(1000), 
+            growth: 1.25, 
+            baseOutput: new Decimal(0.15), 
+            type: 'converter', 
+            resource: 'generatedCode',
+            costResource: 'astNodes',
+            description: "高效的LLVM后端代码生成",
+            unlockThreshold: new Decimal(5000)
+        },
+        'jitCompiler': { 
+            name: "JIT编译器", 
+            baseCost: new Decimal(10000), 
+            growth: 1.3, 
+            baseOutput: new Decimal(0.2), 
+            type: 'converter', 
+            resource: 'generatedCode',
+            costResource: 'astNodes',
+            description: "实时编译，效率×2",
+            unlockThreshold: new Decimal(50000)
+        }
+    };
+
+    // 代码优化技术数据
+    const OPTIMIZATION_TECHS = {
+        'deadCodeElimination': {
+            name: "死代码消除",
+            maxLevel: 10,
+            baseCost: new Decimal(50),
+            growth: 1.6,
+            efficiency: 0.1,
+            description: "移除永远不会执行的代码"
+        },
+        'loopOptimization': {
+            name: "循环优化", 
+            maxLevel: 8,
+            baseCost: new Decimal(200),
+            growth: 1.8,
+            efficiency: 0.15,
+            description: "循环展开和向量化优化"
+        },
+        'functionInlining': {
+            name: "函数内联",
+            maxLevel: 5, 
+            baseCost: new Decimal(500),
+            growth: 2.0,
+            efficiency: 0.2,
+            description: "消除函数调用开销"
+        },
+        'registerAllocation': {
+            name: "寄存器分配",
+            maxLevel: 12,
+            baseCost: new Decimal(100),
+            growth: 1.5,
+            efficiency: 0.05,
+            description: "优化CPU寄存器使用"
+        }
+    };
+
+    // 部署平台数据
+    const DEPLOYMENT_PLATFORMS = {
+        'development': { name: "开发环境", multiplier: 1.0, unlocked: true },
+        'serverCluster': { name: "服务器集群", multiplier: 2.5, unlockThreshold: new Decimal(10000) },
+        'edgeComputing': { name: "边缘计算", multiplier: 5.0, unlockThreshold: new Decimal(100000) },
+        'quantumProcessor': { name: "量子处理器", multiplier: 10.0, unlockThreshold: new Decimal(1000000), requiresPrestige: 3 }
+    };
+
+    // --- 词法分析器类 ---
+    /*
+        是什么: 一个用于将代码字符串分解为一系列“令牌”(Token)的类。
+        为什么: 这是模拟编译器工作的第一步。它将原始代码文本转化为机器更容易理解的结构化数据。
+        如何关联:
+            - 这是《研究Level1.md》1.4.1节“阶段一 - 词法分析”和《实现Level1.md》“核心功能实现”中`Tokenizer`类的具体实现。
+            - `rules`数组中的正则表达式定义了如何识别代码中的不同部分（关键字、数字、字符串等），是词法分析的核心规则。
+            - 游戏的核心玩法之一就是通过这个过程产生`Tokens`资源。
+    */
+    class Tokenizer {
+        constructor() {
+            this.rules = [
+                { type: 'KEYWORD', regex: /^(function|var|let|const|if|else|for|while|return|class)\b/ },
+                { type: 'NUMBER', regex: /^[0-9]+(\.[0-9]+)?\b/ },
+                { type: 'STRING', regex: /^"([^"]*)"|'([^']*)'/ },
+                { type: 'IDENTIFIER', regex: /^[a-zA-Z_][a-zA-Z0-9_]*/ },
+                { type: 'OPERATOR', regex: /^[+\-*/=<>!&|%]+/ },
+                { type: 'DELIMITER', regex: /^[(){}[\];,.]/ },
+                { type: 'WHITESPACE', regex: /^\s+/ },
+            ];
+        }
+
+        tokenize(code) {
+            let tokens = [];
+            let position = 0;
+            while (position < code.length) {
+                let match = null;
+                for (const rule of this.rules) {
+                    const result = rule.regex.exec(code.substring(position));
+                    if (result) {
+                        match = { type: rule.type, value: result[0], length: result[0].length };
+                        break;
+                    }
+                }
+                if (match) {
+                    if (match.type !== 'WHITESPACE') tokens.push({ type: match.type, value: match.value });
+                    position += match.length;
+                } else {
+                    tokens.push({ type: 'UNKNOWN', value: code[position] });
+                    position++;
+                }
+            }
+            return tokens;
+        }
+    }
+
+    // --- 第三阶段：代码生成器类 ---
+    /*
+        是什么: 代码生成器类，负责将AST节点转换为可执行代码。
+        为什么: 实现编译器的第三个核心阶段，从抽象语法树生成目标代码。
+        如何关联: 对应《第三阶段实现方案》中的CodeGenerator架构设计。
+    */
+    class CodeGenerator {
+        constructor() {
+            this.templates = {
+                basic: { efficiency: 1.0, name: "基础代码生成" },
+                llvm: { efficiency: 1.5, name: "LLVM后端" },
+                jit: { efficiency: 2.0, name: "JIT编译器" }
+            };
+            this.currentTemplate = 'basic';
+            this.optimizationLevel = 0;
+        }
+        
+        generateCode(astNodes) {
+            const template = this.templates[this.currentTemplate];
+            const baseGeneration = astNodes.mul(template.efficiency);
+            const optimizationBonus = new Decimal(1).add(this.optimizationLevel * 0.1);
+            return baseGeneration.mul(optimizationBonus);
+        }
+        
+        upgradeTemplate(newTemplate) {
+            if (this.templates[newTemplate]) {
+                this.currentTemplate = newTemplate;
+                return true;
+            }
+            return false;
+        }
+        
+        setOptimizationLevel(level) {
+            this.optimizationLevel = level;
+        }
+    }
+
+    // --- 代码优化器类 ---
+    /*
+        是什么: 代码优化器类，实现各种编译器优化技术。
+        为什么: 模拟真实编译器的优化过程，提供策略深度和技术树玩法。
+        如何关联: 实现《第三阶段实现方案》中的优化技术树概念。
+    */
+    class CodeOptimizer {
+        constructor() {
+            this.optimizations = {};
+            // 初始化优化技术
+            Object.keys(OPTIMIZATION_TECHS).forEach(key => {
+                this.optimizations[key] = {
+                    level: 0,
+                    cost: OPTIMIZATION_TECHS[key].baseCost
+                };
+            });
+        }
+        
+        getOptimizationMultiplier() {
+            let totalMultiplier = new Decimal(1);
+            Object.keys(this.optimizations).forEach(key => {
+                const tech = OPTIMIZATION_TECHS[key];
+                const level = this.optimizations[key].level;
+                const bonus = new Decimal(1).add(level * tech.efficiency);
+                totalMultiplier = totalMultiplier.mul(bonus);
+            });
+            return totalMultiplier;
+        }
+        
+        optimize(generatedCode) {
+            return generatedCode.mul(this.getOptimizationMultiplier());
+        }
+        
+        canUpgradeOptimization(techKey, gameState) {
+            const tech = OPTIMIZATION_TECHS[techKey];
+            const currentData = this.optimizations[techKey];
+            
+            if (currentData.level >= tech.maxLevel) return false;
+            return gameState.resources.generatedCode.gte(currentData.cost);
+        }
+        
+        upgradeOptimization(techKey, gameState) {
+            if (!this.canUpgradeOptimization(techKey, gameState)) return false;
+            
+            const tech = OPTIMIZATION_TECHS[techKey];
+            const currentData = this.optimizations[techKey];
+            
+            gameState.resources.generatedCode = gameState.resources.generatedCode.sub(currentData.cost);
+            currentData.level++;
+            currentData.cost = tech.baseCost.mul(Decimal.pow(tech.growth, currentData.level));
+            
+            return true;
+        }
+    }
+
+    // --- 性能分析器类 ---
+    /*
+        是什么: 性能分析器类，评估代码质量并生成性能分数。
+        为什么: 提供第三阶段的最终产出指标，用于解锁高级功能。
+        如何关联: 实现《第三阶段实现方案》中的性能分析系统。
+    */
+    class PerformanceAnalyzer {
+        constructor() {
+            this.metrics = {
+                executionTime: new Decimal(0),
+                memoryUsage: new Decimal(0), 
+                codeSize: new Decimal(0),
+                overallScore: new Decimal(0)
+            };
+            this.currentPlatform = 'development';
+        }
+        
+        analyzeCode(optimizedCode) {
+            const platform = DEPLOYMENT_PLATFORMS[this.currentPlatform];
+            const baseScore = optimizedCode.mul(0.1).mul(platform.multiplier);
+            
+            this.metrics.overallScore = this.metrics.overallScore.add(baseScore);
+            this.updateDetailedMetrics(optimizedCode);
+            
+            return baseScore;
+        }
+        
+        updateDetailedMetrics(optimizedCode) {
+            // 模拟各种性能指标的计算
+            const codeQuality = optimizedCode.div(100);
+            this.metrics.executionTime = codeQuality.mul(0.8); // 越优化执行时间越短
+            this.metrics.memoryUsage = codeQuality.mul(0.6);
+            this.metrics.codeSize = codeQuality.mul(1.2);
+        }
+        
+        deployTo(platform) {
+            if (DEPLOYMENT_PLATFORMS[platform] && 
+                (DEPLOYMENT_PLATFORMS[platform].unlocked || 
+                 this.checkPlatformUnlock(platform))) {
+                this.currentPlatform = platform;
+                return true;
+            }
+            return false;
+        }
+        
+        checkPlatformUnlock(platform) {
+            const platformData = DEPLOYMENT_PLATFORMS[platform];
+            if (platformData.unlockThreshold) {
+                return this.metrics.overallScore.gte(platformData.unlockThreshold);
+            }
+            return true;
+        }
+        
+        getPerformanceRating() {
+            const score = this.metrics.overallScore;
+            if (score.lt(1000)) return { rating: "初级", color: "#888888" };
+            if (score.lt(10000)) return { rating: "中级", color: "#00ff41" };
+            if (score.lt(100000)) return { rating: "高级", color: "#00ffff" };
+            if (score.lt(1000000)) return { rating: "专家", color: "#ff0080" };
+            return { rating: "大师", color: "#ffd700" };
+        }
+    }
+
+    // --- 游戏状态管理器 ---
+    /*
+        是什么: 一个管理所有游戏核心数据（资源、升级、威望等）的类，是游戏的“大脑”。
+        为什么: 将所有状态集中管理，可以使代码结构更清晰，易于保存、加载和调试。这是一种常见的设计模式。
+        如何关联: 这是《实现Level1.md》4.4节`GameState`类的实现，是整个游戏逻辑的中枢。
+    */
+    class GameState {
+        /*
+            是什么: 游戏状态的构造函数，初始化所有核心数据。
+            为什么: 确保每次新游戏开始时都有一个干净的状态，避免数据污染。
+            如何关联: 直接实现了《实现Level1.md》4.4节中“游戏状态初始化”的逻辑。
+        */        constructor() {
+            this.gameStartTime = Date.now();
+            this.reset(false);
+        }
+
+        /*
+            是什么: 重置游戏状态的方法，用于新游戏开始或执行威望。
+            为什么: `isPrestige`参数允许在重置时保留或增加威望点数，这是威望系统的核心机制。
+            如何关联: 实现了《研究Level1.md》2.4节“威望系统”的重置逻辑。保留`prestigePoints`是“永久性增益”的体现。
+        */        reset(isPrestige) {
+            // 威望系统处理
+            if (isPrestige) {
+                const newPoints = this.calculatePrestigeGain();
+                this.prestige = {
+                    compilerPoints: newPoints,
+                    totalTokensAllTime: this.prestige.totalTokensAllTime, // 保留总计数
+                    prestigeCount: this.prestige.prestigeCount + 1,
+                    canPrestige: false
+                };
+            } else {
+                this.prestige = {
+                    compilerPoints: new Decimal(0),
+                    totalTokensAllTime: new Decimal(0),
+                    prestigeCount: 0,
+                    canPrestige: false
+                };
+            }            this.resources = { 
+                tokens: new Decimal(0), 
+                astNodes: new Decimal(0),
+                generatedCode: new Decimal(0),
+                optimizedCode: new Decimal(0),
+                performanceScore: new Decimal(0)
+            };
+            this.upgrades = {};
+            for (const id in UPGRADE_DATA) this.upgrades[id] = { level: 0 };
+            
+            // 初始化第三阶段升级
+            for (const id in STAGE3_UPGRADES) this.upgrades[id] = { level: 0 };
+
+            this.unlocks = {};
+            for (const id in UPGRADE_DATA) {
+                if (UPGRADE_DATA[id].unlockThreshold) this.unlocks[id] = false;
+            }
+            for (const id in STAGE3_UPGRADES) {
+                if (STAGE3_UPGRADES[id].unlockThreshold) this.unlocks[id] = false;
+            }
+            
+            if (isPrestige && this.prestige.compilerPoints.gt(0)) {
+                this.unlocks.prestige = true; // 威望后保持威望面板可见
+            } else {
+                this.unlocks.prestige = false;
+            }
+            
+            // 初始化第三阶段组件
+            this.codeGenerator = new CodeGenerator();
+            this.codeOptimizer = new CodeOptimizer();
+            this.performanceAnalyzer = new PerformanceAnalyzer();
+        }addResource(type, amount) {
+            if (!(amount instanceof Decimal)) amount = new Decimal(amount);
+            this.resources[type] = this.resources[type].add(amount);
+            if (type === 'tokens') this.prestige.totalTokensAllTime = this.prestige.totalTokensAllTime.add(amount);
+        }
+
+        /*
+            是什么: 保存和加载游戏状态到浏览器的localStorage。
+            为什么: 这是增量游戏的核心功能，允许玩家关闭浏览器后能继续之前的进度，支持“放置”(Idle)玩法。
+            如何关联: 实现了《实现Level1.md》中规划的存档功能，并将所有Decimal对象转换为字符串进行存储。
+        */        save() {
+            const data = {
+                resources: {
+                    tokens: this.resources.tokens.toString(),
+                    astNodes: this.resources.astNodes.toString(),
+                    generatedCode: this.resources.generatedCode.toString(),
+                    optimizedCode: this.resources.optimizedCode.toString(),
+                    performanceScore: this.resources.performanceScore.toString(),
+                },
+                upgrades: this.upgrades,
+                prestige: {
+                    compilerPoints: this.prestige.compilerPoints.toString(),
+                    totalTokensAllTime: this.prestige.totalTokensAllTime.toString(),
+                    prestigeCount: this.prestige.prestigeCount,
+                    canPrestige: this.prestige.canPrestige,
+                },
+                prestigeUpgrades: PRESTIGE_UPGRADES,
+                // 第三阶段数据
+                stage3: {
+                    codeGenerator: {
+                        currentTemplate: this.codeGenerator.currentTemplate,
+                        optimizationLevel: this.codeGenerator.optimizationLevel
+                    },
+                    codeOptimizer: this.codeOptimizer.optimizations,
+                    performanceAnalyzer: {
+                        metrics: {
+                            executionTime: this.performanceAnalyzer.metrics.executionTime.toString(),
+                            memoryUsage: this.performanceAnalyzer.metrics.memoryUsage.toString(),
+                            codeSize: this.performanceAnalyzer.metrics.codeSize.toString(),
+                            overallScore: this.performanceAnalyzer.metrics.overallScore.toString()
+                        },
+                        currentPlatform: this.performanceAnalyzer.currentPlatform
+                    }
+                },
+                unlocks: this.unlocks,
+                lastSave: Date.now(),            };
+            localStorage.setItem('compilerTycoonSave_v5', JSON.stringify(data));
+            
+            // 调试日志：记录保存的重要数据
+            console.log('游戏已保存，当前部署平台:', this.performanceAnalyzer.currentPlatform);
+        }
+
+        load() {
+            const savedData = localStorage.getItem('compilerTycoonSave_v5');
+            if (!savedData) return false;
+
+            const data = JSON.parse(savedData);
+            this.resources.tokens = new Decimal(data.resources.tokens);
+            this.resources.astNodes = new Decimal(data.resources.astNodes);
+            
+            // 加载第三阶段资源
+            if (data.resources.generatedCode) {
+                this.resources.generatedCode = new Decimal(data.resources.generatedCode);
+                this.resources.optimizedCode = new Decimal(data.resources.optimizedCode);
+                this.resources.performanceScore = new Decimal(data.resources.performanceScore);
+            }
+            
+            this.upgrades = data.upgrades;
+            
+            // 修复威望数据加载
+            if (data.prestige) {
+                this.prestige.compilerPoints = new Decimal(data.prestige.compilerPoints || 0);
+                this.prestige.totalTokensAllTime = new Decimal(data.prestige.totalTokensAllTime || 0);
+                this.prestige.prestigeCount = data.prestige.prestigeCount || 0;
+                this.prestige.canPrestige = data.prestige.canPrestige || false;
+            }
+            
+            // 加载威望升级数据
+            if (data.prestigeUpgrades) {
+                Object.keys(PRESTIGE_UPGRADES).forEach(key => {
+                    if (data.prestigeUpgrades[key]) {
+                        PRESTIGE_UPGRADES[key].level = data.prestigeUpgrades[key].level || 0;
+                        PRESTIGE_UPGRADES[key].unlocked = data.prestigeUpgrades[key].unlocked || false;
+                        PRESTIGE_UPGRADES[key].cost = new Decimal(data.prestigeUpgrades[key].cost || PRESTIGE_UPGRADES[key].baseCost);
+                    }
+                });
+            }
+            
+            // 加载第三阶段数据
+            if (data.stage3) {
+                if (data.stage3.codeGenerator) {
+                    this.codeGenerator.currentTemplate = data.stage3.codeGenerator.currentTemplate;
+                    this.codeGenerator.optimizationLevel = data.stage3.codeGenerator.optimizationLevel;
+                }
+                if (data.stage3.codeOptimizer) {
+                    Object.keys(data.stage3.codeOptimizer).forEach(key => {
+                        if (this.codeOptimizer.optimizations[key]) {
+                            this.codeOptimizer.optimizations[key].level = data.stage3.codeOptimizer[key].level || 0;
+                            this.codeOptimizer.optimizations[key].cost = new Decimal(data.stage3.codeOptimizer[key].cost || OPTIMIZATION_TECHS[key].baseCost);
+                        }
+                    });
+                }
+                if (data.stage3.performanceAnalyzer) {
+                    const analyzer = data.stage3.performanceAnalyzer;
+                    if (analyzer.metrics) {
+                        this.performanceAnalyzer.metrics.executionTime = new Decimal(analyzer.metrics.executionTime || 0);
+                        this.performanceAnalyzer.metrics.memoryUsage = new Decimal(analyzer.metrics.memoryUsage || 0);
+                        this.performanceAnalyzer.metrics.codeSize = new Decimal(analyzer.metrics.codeSize || 0);
+                        this.performanceAnalyzer.metrics.overallScore = new Decimal(analyzer.metrics.overallScore || 0);
+                    }                    this.performanceAnalyzer.currentPlatform = analyzer.currentPlatform || 'development';
+                    console.log('加载的部署平台:', this.performanceAnalyzer.currentPlatform);
+                }
+            }              this.unlocks = { ...this.unlocks, ...data.unlocks };
+
+            // 修复离线时间计算
+            const currentTime = Date.now();
+            const lastSaveTime = data.lastSave || currentTime;
+            const offlineTime = Math.max(0, (currentTime - lastSaveTime) / 1000);
+            
+            // 只有离线超过30秒才显示离线收益
+            if (offlineTime >= 30) {
+                console.log(`检测到离线时间: ${offlineTime.toFixed(2)}秒`);
+                this.calculateOfflineGains(offlineTime);
+            }
+            
+            return true;
+        }
+
+        /*
+            是什么: 计算玩家离线期间的收益。
+            为什么: 这是“放置游戏”的关键特性，奖励玩家的回归，让他们感觉即使不在线，游戏也在为他们“工作”。
+            如何关联: 实现了《实现Level1.md》中规划的“离线收益”功能，是留住玩家的重要机制。
+        */
+        calculateOfflineGains(seconds) {
+            const production = game.calculateProduction();
+            const tokensGained = production.tokens.mul(seconds);
+            this.addResource('tokens', tokensGained);
+
+            // 离线期间计算AST节点的转换
+            const astGained = production.astNodes.mul(seconds);
+            if (this.resources.tokens.gte(astGained)) {
+                this.resources.tokens = this.resources.tokens.sub(astGained);
+                this.addResource('astNodes', astGained);
+            }
+
+            game.UI.showOfflinePopup(tokensGained, seconds);
+        }        // 检查威望解锁
+        checkPrestigeUnlocks() {
+            Object.keys(PRESTIGE_UPGRADES).forEach(key => {
+                const upgrade = PRESTIGE_UPGRADES[key];
+                if (this.prestige.prestigeCount >= upgrade.requiresPrestige && !upgrade.unlocked) {
+                    upgrade.unlocked = true;
+                    console.log(`威望升级解锁: ${upgrade.name}`); // 调试信息
+                }
+            });
+        }
+
+        /*
+            是什么: 计算威望点数带来的生产力加成。
+            为什么: 这是威望系统给予玩家的核心奖励——一个全局的生产力乘数。
+            如何关联: 实现了《实现Level1.md》“威望机制”中“所有生产速度 × (编译器点数 + 1)”的效果（这里是+10%每点）。
+        */
+        getPrestigeMultiplier() { return this.prestige.compilerPoints.add(1); }
+
+        /*
+            是什么: 计算当前可以获得的威望点数。
+            为什么: 根据玩家在本轮游戏中的总Token产量来决定威望收益，激励玩家推进更深。
+            如何关联: 直接实现了《实现Level1.md》中的威望公式 `prestigeGain = Decimal.sqrt(totalTokens.div(1e6)).floor()`。
+        */
+        calculatePrestigeGain() {
+            // 公式：编译器点数 = √(总tokens / 100万)
+            const threshold = new Decimal(1000000); // 100万
+            if (this.prestige.totalTokensAllTime.lt(threshold)) {
+                return new Decimal(0);
+            }
+            return Decimal.sqrt(this.prestige.totalTokensAllTime.div(threshold)).floor();
+        }
+
+        // 检查是否可以进行威望
+        checkPrestigeAvailability() {
+            const gain = this.calculatePrestigeGain();
+            this.prestige.canPrestige = gain.gt(this.prestige.compilerPoints);
+            return this.prestige.canPrestige;
+        }
+
+        /*
+            是什么: 计算当前的生产力（Tokens和AST节点）。
+            为什么: 这是游戏的核心循环，决定了玩家每秒能获得多少资源。
+            如何关联: 实现了《实现Level1.md》中“生产力计算”的逻辑，考虑了所有升级和威望加成。
+        */
+        performPrestige() {
+            if (!this.prestige.canPrestige) return false;
+            
+            // 计算获得的编译器点数
+            const newPoints = this.calculatePrestigeGain();
+            const gainedPoints = newPoints.sub(this.prestige.compilerPoints);
+            
+            // 保存威望前数据（用于显示）
+            const prestigeData = {
+                gainedPoints: gainedPoints,
+                previousTokens: this.resources.tokens,
+                timeSpent: Date.now() - this.gameStartTime
+            };
+            
+            // 重置游戏状态
+            this.resources.tokens = new Decimal(0);
+            this.resources.astNodes = new Decimal(0);
+            
+            // 重置升级等级
+            Object.keys(this.upgrades).forEach(key => {
+                this.upgrades[key].level = 0;
+                this.upgrades[key].cost = this.upgrades[key].baseCost;
+            });
+            
+            // 重置解锁状态（但保留威望解锁）
+            this.unlocks.parser = false;
+            // 不重置 this.unlocks.prestige
+            
+            // 更新威望数据
+            this.prestige.compilerPoints = newPoints;
+            this.prestige.prestigeCount++;
+            this.prestige.canPrestige = false;
+            
+            // 显示威望收益弹窗
+            this.showPrestigeGainsPopup(prestigeData);
+            
+            // 重新计算生产力（包含威望加成）
+            this.calculateProduction();
+            
+            return true;
+        }
+
+
+        /*
+            是什么: 显示威望收益弹窗，告知玩家威望重置的详细信息。
+            为什么: 提供视觉反馈和成就感，让玩家清楚地看到威望带来的收益。
+            如何关联: 实现威望系统的用户体验部分，增强游戏的满足感。
+        */
+        showPrestigeGainsPopup(prestigeData) {
+            const popup = document.createElement('div');
+            popup.className = 'prestige-popup';
+            popup.innerHTML = `
+                <div class="prestige-popup-content">
+                    <h2 class="glitch" data-text="SYSTEM RECOMPILED">SYSTEM RECOMPILED</h2>
+                    <div class="prestige-summary">
+                        <p>🔄 威望重置完成!</p>
+                        <p>⚡ 获得编译器点数: +${this.formatNumber(prestigeData.gainedPoints)}</p>
+                        <p>📊 上轮tokens总数: ${this.formatNumber(prestigeData.previousTokens)}</p>
+                        <p>⏱️ 用时: ${this.formatTime(prestigeData.timeSpent / 1000)}</p>
+                        <p>🚀 当前生产倍数: ×${this.formatNumber(this.getPrestigeMultiplier())}</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="close-btn">
+                        开始新的编译循环
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+            
+            // 5秒后自动关闭
+            setTimeout(() => {
+                if (popup.parentElement) {
+                    popup.remove();
+                }
+            }, 5000);
+        }
+
+        /*
+            是什么: 格式化时间显示（秒转换为分钟:秒格式）。
+            为什么: 提供更友好的时间显示格式。
+            如何关联: 辅助威望弹窗显示游戏时长。
+        */
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        /*
+            是什么: 计算当前的生产力（Tokens和AST节点）。
+            为什么: 这是游戏的核心循环，决定了玩家每秒能获得多少资源。
+            如何关联: 实现了《实现Level1.md》中“生产力计算”的逻辑，考虑了所有升级和威望加成。
+        */        calculateProduction() {
+            const prestigeMultiplier = this.getPrestigeMultiplier();
+            
+            // 基础生产力 × 威望倍数
+            this.production.tokensPerSecond = new Decimal(this.upgrades.tokenizer.level)
+                .mul(1.2)
+                .add(this.upgrades.autoTokenizer.level * 5)
+                .add(this.upgrades.hyperTokenizer.level * 25)
+                .mul(prestigeMultiplier); // 威望加成
+                
+            if (this.unlocks.parser) {
+                this.production.astNodesPerSecond = new Decimal(this.upgrades.parser.level)
+                    .mul(0.8)
+                    .mul(prestigeMultiplier); // 威望加成
+            }
+            
+            // 第三阶段生产力计算
+            if (this.unlocks.basicCodeGen) {
+                // 代码生成：AST节点 → 生成代码
+                this.production.generatedCodePerSecond = new Decimal(0);
+                for (const id in STAGE3_UPGRADES) {
+                    const upgrade = this.upgrades[id];
+                    if (upgrade && upgrade.level > 0) {
+                        const info = STAGE3_UPGRADES[id];
+                        if (info.resource === 'generatedCode') {
+                            const output = info.baseOutput.mul(upgrade.level).mul(prestigeMultiplier);
+                            this.production.generatedCodePerSecond = this.production.generatedCodePerSecond.add(output);
+                        }
+                    }
+                }
+                
+                // 代码优化：生成代码 → 优化代码
+                if (this.production.generatedCodePerSecond && this.production.generatedCodePerSecond.gt(0)) {
+                    const optimizationMultiplier = this.codeOptimizer.getOptimizationMultiplier();
+                    this.production.optimizedCodePerSecond = this.production.generatedCodePerSecond
+                        .mul(0.1) // 基础转换率
+                        .mul(optimizationMultiplier);
+                }
+                
+                // 性能分数：优化代码 → 性能分数
+                if (this.production.optimizedCodePerSecond && this.production.optimizedCodePerSecond.gt(0)) {
+                    const platformMultiplier = DEPLOYMENT_PLATFORMS[this.performanceAnalyzer.currentPlatform].multiplier;
+                    this.production.performanceScorePerSecond = this.production.optimizedCodePerSecond
+                        .mul(0.1) // 基础转换率
+                        .mul(platformMultiplier);
+                }
+            }
+        }
+    }
+
+    // --- UI 与 可视化 ---
+    /*
+        是什么: 一个专门负责更新用户界面(UI)所有部分的类。
+        为什么: 将UI更新逻辑与游戏核心逻辑(GameState)分离，这是一种良好的编程实践，称为“关注点分离”，使代码更易于维护。
+        如何关联: 这个类负责将`GameState`中的数据渲染到《实现Level1.md》中设计的“仪表盘布局”的各个HTML元素上。
+    */
+    class UIUpdater {        constructor() {
+            this.elements = {
+                statsContainer: document.getElementById('stats-container'),
+                upgradesContainer: document.getElementById('upgrades-container'),
+                tokenStream: document.getElementById('token-stream'),
+                prestigePanel: document.getElementById('prestige-panel'),
+                prestigeGain: document.getElementById('prestige-gain-display'),
+                // 第三阶段元素
+                stage3Panel: document.getElementById('stage3-panel'),
+                codeGenProgress: document.getElementById('code-gen-progress'),
+                generatorType: document.getElementById('generator-type'),
+                generatedCodeCount: document.getElementById('generated-code-count'),
+                optimizationTechs: document.getElementById('optimization-techs'),
+                executionTimeGauge: document.getElementById('execution-time-gauge'),
+                memoryEfficiencyGauge: document.getElementById('memory-efficiency-gauge'),
+                performanceRating: document.getElementById('performance-rating'),
+                performanceScore: document.getElementById('performance-score'),
+                deploymentPlatforms: document.getElementById('deployment-platforms')
+            };
+        }
+
+        /*
+            是什么: 格式化大数字以便于阅读。
+            为什么: 1000000 不如 1.00M 直观。这种格式化是增量游戏UI的标配。
+            如何关联: 实现了《实现Level1.md`GameState`类中的`formatNumber`功能，提升用户体验。
+        */
+        formatNumber(num) {
+            if (num.lt(1e3)) return num.toDP(1).toFixed();
+            if (num.lt(1e6)) return num.div(1e3).toDP(2) + 'K';
+            if (num.lt(1e9)) return num.div(1e6).toDP(2) + 'M';
+            if (num.lt(1e12)) return num.div(1e9).toDP(2) + 'B';
+            return num.toExponential(2);
+        }        updateStats(state, production) {
+            const prestigeBonus = (state.getPrestigeMultiplier().sub(1)).mul(100);
+            const isParserUnlocked = state.unlocks['auto-parser-1'];
+            const isStage3Unlocked = state.unlocks['basicCodeGen'];
+            
+            let statsData = [
+                { label: 'Tokens', value: this.formatNumber(state.resources.tokens), color: 'var(--accent-green)' },
+                { label: 'Tokens/s', value: `+${this.formatNumber(production.tokens)}`, color: 'text-green-400' }
+            ];
+            
+            if (isParserUnlocked) {
+                statsData.push(
+                    { label: 'AST Nodes', value: this.formatNumber(state.resources.astNodes), color: 'var(--accent-cyan)' },
+                    { label: 'AST Nodes/s', value: `+${this.formatNumber(production.astNodes)}`, color: 'text-cyan-400' }
+                );
+            }
+            
+            if (isStage3Unlocked) {
+                statsData.push(
+                    { label: '生成代码', value: this.formatNumber(state.resources.generatedCode), color: 'text-purple-400' },
+                    { label: '优化代码', value: this.formatNumber(state.resources.optimizedCode), color: 'text-orange-400' },
+                    { label: '性能分数', value: this.formatNumber(state.resources.performanceScore), color: 'text-yellow-400' }
+                );
+            }
+            
+            statsData.push(
+                { label: '编译器点数', value: state.prestige.compilerPoints.toFixed(), color: 'text-yellow-400' },
+                { label: '威望加成', value: `+${prestigeBonus.toFixed(1)}%`, color: 'text-yellow-400' }
+            );
+            
+            const statsHTML = statsData.map(stat => `
+                <div class="stat-item">
+                    <p class="text-sm text-gray-400 mb-1">${stat.label}</p>
+                    <p class="text-xl font-bold" style="color: ${stat.color};">${stat.value}</p>
+                </div>
+            `).join('');
+            
+            this.elements.statsContainer.innerHTML = statsHTML;
+        }        updateUpgrades(state) {
+            this.elements.upgradesContainer.innerHTML = '';
+            
+            // 普通升级
+            for (const id in UPGRADE_DATA) {
+                const info = UPGRADE_DATA[id];
+                if (info.unlockThreshold && !state.unlocks[id]) continue;
+
+                const upgradeState = state.upgrades[id];
+                const costResource = info.costResource || 'tokens';
+                
+                // 计算批量购买的总成本
+                const totalCost = game.calculateBulkCost(info.baseCost, info.growth, upgradeState.level, game.buyAmount);
+                const canAfford = state.resources[costResource].gte(totalCost);
+
+                // 显示文本：x1时显示单个，x10/x100时显示批量
+                const buttonText = game.buyAmount === 1 ? 
+                    `升级 (${this.formatNumber(totalCost)} ${costResource})` :
+                    `升级 x${game.buyAmount} (${this.formatNumber(totalCost)} ${costResource})`;
+
+                const div = document.createElement('div');
+                div.className = 'hacker-box p-4 border border-transparent transition-all';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-bold">${info.name}</h3>
+                        <span class="text-md font-bold text-gray-400">Lv. ${upgradeState.level}</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1 mb-3">${info.description}</p>
+                    <button class="w-full btn btn-primary" ${canAfford ? '' : 'disabled'} onclick="game.buyUpgrade('${id}')">
+                        ${buttonText}
+                    </button>
+                `;
+                this.elements.upgradesContainer.appendChild(div);
+            }
+              // 第三阶段升级
+            if (state.unlocks.basicCodeGen) {
+                for (const id in STAGE3_UPGRADES) {
+                    const info = STAGE3_UPGRADES[id];
+                    if (info.unlockThreshold && !state.unlocks[id]) continue;
+
+                    const upgradeState = state.upgrades[id];
+                    const costResource = info.costResource || 'astNodes';
+                    
+                    // 计算批量购买的总成本
+                    const totalCost = game.calculateBulkCost(info.baseCost, info.growth, upgradeState.level, game.buyAmount);
+                    const canAfford = state.resources[costResource].gte(totalCost);
+
+                    // 显示文本：x1时显示单个，x10/x100时显示批量
+                    const buttonText = game.buyAmount === 1 ? 
+                        `升级 (${this.formatNumber(totalCost)} ${costResource})` :
+                        `升级 x${game.buyAmount} (${this.formatNumber(totalCost)} ${costResource})`;
+
+                    const div = document.createElement('div');
+                    div.className = 'hacker-box p-4 border border-transparent transition-all bg-gradient-to-r from-purple-800 to-indigo-800';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-purple-300">🔧 ${info.name}</h3>
+                            <span class="text-md font-bold text-purple-400">Lv. ${upgradeState.level}</span>
+                        </div>
+                        <p class="text-sm text-purple-200 mt-1 mb-3">${info.description}</p>
+                        <button class="w-full btn btn-secondary" ${canAfford ? '' : 'disabled'} onclick="game.buyStage3Upgrade('${id}')">
+                            ${buttonText}
+                        </button>
+                    `;
+                    this.elements.upgradesContainer.appendChild(div);
+                }
+            }
+            
+            // 威望升级
+            if (state.unlocks.prestige) {
+                for (const id in PRESTIGE_UPGRADES) {
+                    const info = PRESTIGE_UPGRADES[id];
+                    if (!info.unlocked) continue;
+
+                    const costResource = 'compilerPoints';
+                    const cost = info.baseCost.times(Decimal.pow(1.5, info.level)); // 威望升级成长率
+                    const canAfford = state.prestige.compilerPoints.gte(cost);
+
+                    const div = document.createElement('div');
+                    div.className = 'hacker-box p-4 border border-transparent transition-all bg-gradient-to-r from-purple-900 to-blue-900';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-yellow-300">⚡ ${info.name}</h3>
+                            <span class="text-md font-bold text-yellow-400">Lv. ${info.level}</span>
+                        </div>
+                        <p class="text-sm text-gray-300 mt-1 mb-3">${info.effect}</p>
+                        <button class="w-full btn btn-secondary" ${canAfford ? '' : 'disabled'} onclick="game.buyPrestigeUpgrade('${id}')">
+                            升级 (成本: ${this.formatNumber(cost)} 编译器点数)
+                        </button>
+                    `;
+                    this.elements.upgradesContainer.appendChild(div);
+                }
+            }
+        }        updatePrestige(state) {
+            if (state.unlocks.prestige) {
+                this.elements.prestigePanel.style.display = 'block';
+                const currentGain = state.calculatePrestigeGain();
+                const newGain = currentGain.sub(state.prestige.compilerPoints);
+                this.elements.prestigeGain.textContent = newGain.toFixed();
+                
+                // 更新威望按钮状态
+                const prestigeBtn = document.getElementById('prestige-btn');
+                if (state.prestige.canPrestige && newGain.gt(0)) {
+                    prestigeBtn.disabled = false;
+                    prestigeBtn.textContent = `执行重构 (+${newGain.toFixed()} 编译器点数)`;
+                } else {
+                    prestigeBtn.disabled = true;
+                    prestigeBtn.textContent = '执行重构 (需要更多tokens)';
+                }
+            } else {
+                this.elements.prestigePanel.style.display = 'none';
+            }
+        }        /*
+            是什么: 更新第三阶段专属UI面板。
+            为什么: 为第三阶段的复杂功能提供专门的用户界面更新。
+            如何关联: 实现第三阶段UI/UX设计的核心展示逻辑。
+        */        updateStage3Panels(state) {
+            const stage3Tab = document.getElementById('stage3-tab');
+            const stage3TabContent = document.getElementById('stage3-tab-content');
+            
+            // 检查第三阶段是否解锁
+            const isUnlocked = state.unlocks.basicCodeGen;
+            
+            if (!isUnlocked) {
+                if (stage3Tab) stage3Tab.style.display = 'none';
+                return;
+            }
+
+            // 显示第三阶段标签
+            if (stage3Tab) stage3Tab.style.display = 'block';
+
+            // 更新代码生成器类型显示
+            if (this.elements.generatorType) {
+                const template = state.codeGenerator.templates[state.codeGenerator.currentTemplate];
+                this.elements.generatorType.textContent = template.name;
+            }
+
+            // 更新生成代码计数
+            if (this.elements.generatedCodeCount) {
+                this.elements.generatedCodeCount.textContent = this.formatNumber(state.resources.generatedCode);
+            }
+
+            // 更新AST节点显示（代码生成的输入）
+            const astDisplay = document.querySelector('.input-section .resource-flow');
+            if (astDisplay) {
+                astDisplay.innerHTML = `📊 ${this.formatNumber(state.resources.astNodes)}`;
+            }
+
+            // 更新代码生成进度条
+            if (this.elements.codeGenProgress) {
+                const progress = Math.min(100, state.resources.astNodes.div(100).toNumber());
+                this.elements.codeGenProgress.style.width = `${progress}%`;
+            }
+
+            // 更新性能指标
+            if (this.elements.performanceScore) {
+                this.elements.performanceScore.textContent = this.formatNumber(state.resources.performanceScore) + ' 分';
+            }
+
+            // 更新性能评级
+            if (this.elements.performanceRating) {
+                const score = state.performanceAnalyzer.metrics.overallScore;
+                let rating = 'F';
+                let color = 'text-red-400';
+                if (score.gte(10000)) { rating = 'S+'; color = 'text-yellow-400'; }
+                else if (score.gte(5000)) { rating = 'S'; color = 'text-orange-400'; }
+                else if (score.gte(1000)) { rating = 'A'; color = 'text-green-400'; }
+                else if (score.gte(500)) { rating = 'B'; color = 'text-blue-400'; }
+                else if (score.gte(100)) { rating = 'C'; color = 'text-cyan-400'; }
+                else if (score.gte(10)) { rating = 'D'; color = 'text-gray-400'; }
+                
+                this.elements.performanceRating.className = `text-3xl font-bold ${color} performance-rating`;
+                this.elements.performanceRating.textContent = rating;
+            }
+
+            // 更新优化技术按钮
+            this.updateOptimizationTechs(state);
+            
+            // 更新部署平台按钮
+            this.updateDeploymentPlatforms(state);
+
+            console.log('第三阶段面板已更新', {
+                unlocked: isUnlocked,
+                generatedCode: state.resources.generatedCode.toString(),
+                astNodes: state.resources.astNodes.toString()
+            });
+        }
+
+        /*
+            是什么: 更新优化技术树的UI。
+            为什么: 展示可用的优化技术及其升级状态。
+        */        updateOptimizationTechs(state) {
+            if (!this.elements.optimizationTechs) return;
+
+            this.elements.optimizationTechs.innerHTML = '';
+            
+            Object.keys(OPTIMIZATION_TECHS).forEach(key => {
+                const tech = OPTIMIZATION_TECHS[key];
+                const currentData = state.codeOptimizer.optimizations[key];
+                
+                // 计算能够购买的数量（不超过批量购买设置和剩余可购买等级）
+                const maxLevels = tech.maxLevel - currentData.level;
+                const actualAmount = Math.min(game.buyAmount, maxLevels);
+                
+                // 计算批量购买的总成本
+                let totalCost = new Decimal(0);
+                let tempLevel = currentData.level;
+                for (let i = 0; i < actualAmount; i++) {
+                    const levelCost = tech.baseCost.mul(Decimal.pow(tech.growth, tempLevel));
+                    totalCost = totalCost.plus(levelCost);
+                    tempLevel++;
+                }
+                
+                const canAfford = actualAmount > 0 && state.resources.generatedCode.gte(totalCost);
+                
+                // 显示文本：x1时显示单个，x10/x100时显示批量
+                const buttonText = actualAmount === 1 ? 
+                    this.formatNumber(totalCost) :
+                    `x${actualAmount} (${this.formatNumber(totalCost)})`;
+
+                const div = document.createElement('div');
+                div.className = 'optimization-tech p-3 border border-gray-600 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-orange-300">${tech.name}</h4>
+                        <span class="text-sm text-orange-400">Lv.${currentData.level}/${tech.maxLevel}</span>
+                    </div>
+                    <p class="text-xs text-gray-300 mb-2">${tech.description}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-green-400">+${(tech.efficiency * 100).toFixed(1)}%效率</span>
+                        <button class="btn-mini ${canAfford ? 'bg-orange-600 hover:bg-orange-500' : 'bg-gray-600 cursor-not-allowed'}" 
+                                ${canAfford ? '' : 'disabled'} 
+                                onclick="game.buyOptimization('${key}')">
+                            ${buttonText}
+                        </button>
+                    </div>
+                `;
+                this.elements.optimizationTechs.appendChild(div);
+            });
+        }
+
+        /*
+            是什么: 更新部署平台的UI。
+            为什么: 展示可用的部署平台及其性能倍数。
+        */
+        updateDeploymentPlatforms(state) {
+            if (!this.elements.deploymentPlatforms) return;
+
+            this.elements.deploymentPlatforms.innerHTML = '';
+            
+            Object.keys(DEPLOYMENT_PLATFORMS).forEach(key => {
+                const platform = DEPLOYMENT_PLATFORMS[key];
+                const isActive = state.performanceAnalyzer.currentPlatform === key;
+                const isUnlocked = platform.unlocked || state.performanceAnalyzer.checkPlatformUnlock(key);
+
+                const div = document.createElement('div');
+                div.className = `deployment-platform p-3 border rounded-lg transition-all cursor-pointer ${
+                    isActive ? 'border-cyan-400 bg-cyan-900' : 
+                    isUnlocked ? 'border-gray-600 bg-gray-800 hover:bg-gray-700' : 
+                    'border-gray-700 bg-gray-900 opacity-50'
+                }`;
+                
+                if (isUnlocked) {
+                    div.onclick = () => game.switchDeploymentPlatform(key);
+                }
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <h4 class="font-bold ${isActive ? 'text-cyan-300' : 'text-white'}">${platform.name}</h4>
+                        ${isActive ? '<span class="text-xs text-cyan-400">当前</span>' : ''}
+                    </div>
+                    <p class="text-xs text-gray-300 mb-2">${platform.description}</p>
+                    <div class="text-sm">
+                        <span class="text-green-400">×${platform.multiplier} 性能倍数</span>
+                        ${platform.unlockThreshold ? 
+                            `<div class="text-xs text-yellow-400 mt-1">需要: ${this.formatNumber(platform.unlockThreshold)} 性能分数</div>` : 
+                            ''
+                        }
+                    </div>
+                `;
+                this.elements.deploymentPlatforms.appendChild(div);
+            });
+        }
+
+        /*
+            是什么: 将词法分析器生成的令牌数组显示在屏幕上。
+            为什么: 为玩家提供即时、生动的视觉反馈，让他们看到自己的“点击”操作（词法分析）产生了具体的结果。
+            如何关联: 这是《实现Level1.md》中“阶段一：词法分析”里“可视化：代码字符串逐个分解为彩色token块”的核心实现。
+        */
+        displayTokens(tokens) {
+            this.elements.tokenStream.innerHTML = '';
+            tokens.forEach((token, index) => {
+                const span = document.createElement('span');
+                span.className = `token token-${token.type}`;
+                span.textContent = token.value;
+                span.style.animationDelay = `${index * 20}ms`;
+                this.elements.tokenStream.appendChild(span);
+            });
+        }        showOfflinePopup(gains, seconds) {
+            // 确保显示正确的离线时间
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            
+            const div = document.createElement('div');
+            div.className = 'offline-popup fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+            div.innerHTML = `
+                <div class="hacker-box p-8 text-center popup-content">
+                    <h3 class="text-2xl font-bold glitch" data-text="欢迎回来!">欢迎回来!</h3>
+                    <p class="my-4">您离线了 ${minutes} 分钟 ${remainingSeconds} 秒</p>
+                    <p class="mb-6">编译器为您获得了 <span class="font-bold text-green-400">${this.formatNumber(gains)}</span> Tokens!</p>
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">领取</button>
+                </div>
+            `;
+            document.body.appendChild(div);
+            
+            // 调试日志
+            console.log(`离线收益计算: ${seconds.toFixed(2)}秒 = ${minutes}分${remainingSeconds}秒, 获得${this.formatNumber(gains)} Tokens`);
+        }
+    }
+
+    // --- 抽象语法树(AST) 可视化器 ---
+    /*
+        是什么: 使用D3.js库来动态生成和渲染抽象语法树的类。
+        为什么: 这是游戏进入第二阶段“语法分析”的核心视觉表现。它将无形的“AST节点”资源转化为玩家可见的、不断成长的树状结构。
+        如何关联:
+            - 这是《实现Level1.md》中“阶段二：语法分析”和“AST可视化 (使用D3.js)”功能的代码实现。
+            - 它将游戏的进程（AST节点数量）与一个复杂的、有主题深度的可视化直接关联起来，强化了“构建编译器”的沉浸感。
+    */
+    class ASTVisualizer {
+        constructor(containerId) {
+            this.container = d3.select(`#${containerId}`);
+            this.svg = this.container.append("svg").attr("width", "100%").attr("height", "100%");
+            this.treeLayout = d3.tree();
+            this.rootNode = null;
+        }
+
+        // 这是一个简化的、用于演示的假数据生成器。在真实编译器中，AST由解析器根据代码结构生成。
+        generateTreeData(nodeCount) {
+            if (nodeCount <= 0) return null;
+            const root = { name: "Program", children: [] };
+            let queue = [root];
+            let count = 1;
+
+            while (count < nodeCount && queue.length > 0) {
+                let current = queue.shift();
+                if (!current.children) current.children = [];
+
+                let childrenCount = Math.floor(Math.random() * 3) + 1;
+                for (let i = 0; i < childrenCount && count < nodeCount; i++) {
+                    const child = { name: `Node_${count}` };
+                    current.children.push(child);
+                    queue.push(child);
+                    count++;
+                }
+            }
+            return root;
+        }
+
+        update(astNodeCount) {
+            // 将AST节点数量通过对数关系映射到可视化的节点数，以控制视觉上的复杂度，避免节点过多导致卡顿。
+            const nodeCount = Math.floor(astNodeCount.add(1).log(10).times(10).toNumber());
+            const treeData = this.generateTreeData(nodeCount);
+
+            const { width, height } = this.container.node().getBoundingClientRect();
+            this.treeLayout.size([width, height - 40]);
+
+            this.svg.selectAll("*").remove();
+
+            if (!treeData) {
+                this.svg.append("text").attr("x", "50%").attr("y", "50%").attr("text-anchor", "middle").style("fill", "#8b949e").text("升级解析器以构建AST...");
+                return;
+            }
+
+            this.rootNode = d3.hierarchy(treeData);
+            this.treeLayout(this.rootNode);
+
+            const g = this.svg.append('g').attr('transform', 'translate(0, 20)');
+
+            g.selectAll('path.link').data(this.rootNode.links()).enter().append('path')
+                .style('fill', 'none').style('stroke', '#30363d').style('stroke-width', '1.5px')
+                .attr('d', d3.linkVertical().x(d => d.x).y(d => d.y))
+                .style('opacity', 0).transition().duration(500).style('opacity', 1);
+
+            const nodes = g.selectAll('g.node').data(this.rootNode.descendants()).enter().append('g')
+                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .style('opacity', 0);
+
+            nodes.append('circle').attr('r', 5).style('fill', '#161b22').style('stroke', '#39c5fe').style('stroke-width', '2px');
+
+            nodes.append('text')
+                .text(d => d.data.name)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '-0.8em')
+                .style('font-size', '11px')
+                .style('fill', '#c9d1d9');
+
+            nodes.transition().duration(500).delay((d,i) => i * 15).style('opacity', 1);
+        }
+    }
+
+    // --- 性能图表 ---
+    /*
+        是什么: 使用Chart.js库来创建和更新实时性能图表的类。
+        为什么: 为玩家提供关于他们“自动化引擎”效率的直观数据反馈，让他们能清晰地看到每次升级带来的性能提升。
+        如何关联:
+            - 这是《实现Level1.md》中“性能图表 (使用Chart.js)”功能的代码实现。
+            - 图表追踪并显示“Tokens/s”和“AST Nodes/s”，直接对应了《研究Level1.md`3.3.2节中仪表盘需要追踪的核心指标。
+    */
+    class PerformanceChart {
+        constructor(canvasId) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const textColor = '#c9d1d9';
+            const gridColor = '#30363d';
+
+            this.chart = new Chart(ctx, {
+                type: 'line', data: { labels: [], datasets: [
+                        { label: 'Tokens/s', data: [], borderColor: '#23d18b', backgroundColor: 'rgba(35, 209, 139, 0.1)', tension: 0.4, yAxisID: 'y' },
+                        { label: 'AST Nodes/s', data: [], borderColor: '#39c5fe', backgroundColor: 'rgba(57, 197, 254, 0.1)', tension: 0.4, yAxisID: 'y1' }
+                    ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { position: 'left', beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: textColor } },
+                        x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } }
+                    },
+                    plugins: { legend: { labels: { color: textColor } } }
+                }
+            });
+        }
+        update(production) {
+            const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            this.chart.data.labels.push(now);
+            this.chart.data.datasets[0].data.push(production.tokens.toNumber());
+            this.chart.data.datasets[1].data.push(production.astNodes.toNumber());
+            if (this.chart.data.labels.length > 20) {
+                this.chart.data.labels.shift();
+                this.chart.data.datasets.forEach(ds => ds.data.shift());
+            }
+            this.chart.update('none');
+        }
+    }
+
+    // --- 主游戏控制器 ---
+    /*
+        是什么: 游戏的总控制器，负责初始化所有模块、管理游戏主循环和处理玩家输入。
+        为什么: 作为程序的入口点和协调者，将所有子系统（状态、UI、分词器等）串联起来工作。
+        如何关联: 这是整个游戏逻辑的“main”函数，执行了《实现Level1.md》中定义的开发里程碑中的所有核心功能。
+    */
+    class Game {        constructor() {
+            this.state = new GameState();
+            this.UI = new UIUpdater();
+            this.tokenizer = new Tokenizer();
+            this.ast = null;
+            this.chart = null;
+            this.editor = null;
+            this.lastTick = performance.now();
+            this.devMode = false; // 开发者模式标志
+            this.buyAmount = 1; // 购买数量：1, 10, 100
+        }init() {
+            // 初始化图表和AST可视化
+            this.chart = new PerformanceChart('performance-chart');
+            this.ast = new ASTVisualizer('ast-visualization');
+
+            if (!this.state.load()) {
+                console.log("No save file found, starting new game.");
+            } else {
+                console.log("Save file loaded.");
+            }
+
+            // 初始化标签页切换功能
+            this.initTabSystem();
+
+            document.getElementById('run-lexer-btn').addEventListener('click', () => this.runLexer());
+            document.getElementById('prestige-btn').addEventListener('click', () => this.prestige());
+            
+            // 开发者后门 - 键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                // Ctrl + Shift + D 激活开发者模式
+                if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                    this.toggleDevMode();
+                }
+                
+                // 开发者快捷键（需要先激活开发者模式）
+                if (this.devMode) {
+                    switch(e.key) {
+                        case '1': // 获得100万tokens
+                            this.state.addResource('tokens', new Decimal(1000000));
+                            console.log('🎮 DEV: 添加了100万tokens');
+                            break;
+                        case '2': // 获得1000万tokens
+                            this.state.addResource('tokens', new Decimal(10000000));
+                            console.log('🎮 DEV: 添加了1000万tokens');
+                            break;
+                        case '3': // 获得100编译器点数
+                            this.state.prestige.compilerPoints = this.state.prestige.compilerPoints.add(100);
+                            console.log('🎮 DEV: 添加了100编译器点数');
+                            break;
+                        case '4': // 解锁所有升级
+                            Object.keys(this.state.unlocks).forEach(key => {
+                                this.state.unlocks[key] = true;
+                            });
+                            console.log('🎮 DEV: 解锁了所有升级');
+                            break;                        case '5': // 模拟威望次数
+                            this.state.prestige.prestigeCount += 5;
+                            this.state.checkPrestigeUnlocks();
+                            console.log('🎮 DEV: 增加了5次威望次数');
+                            break;
+                        case '6': // 快速解锁第三阶段
+                            this.state.addResource('astNodes', new Decimal(1000000));
+                            this.state.unlocks.basicCodeGen = true;
+                            this.state.unlocks.llvmCodeGen = true;
+                            this.state.unlocks.jitCodeGen = true;
+                            console.log('🎮 DEV: 解锁第三阶段并添加100万AST节点');
+                            break;
+                        case '7': // 添加第三阶段资源
+                            this.state.addResource('generatedCode', new Decimal(100000));
+                            this.state.addResource('optimizedCode', new Decimal(10000));
+                            this.state.addResource('performanceScore', new Decimal(1000));
+                            console.log('🎮 DEV: 添加第三阶段资源');
+                            break;
+                        case '0': // 重置游戏
+                            if (confirm('确定要重置游戏吗？')) {
+                                localStorage.removeItem('compilerTycoonSave_v4');
+                                location.reload();
+                            }
+                            break;
+                    }
+                }
+            });
+
+            // 启动游戏循环和定时更新
+            requestAnimationFrame((t) => this.gameLoop(t)); // 高频循环，用于平滑的资源增长
+            setInterval(() => this.slowUpdate(), 250); // 中频循环，用于更新UI和解锁检查
+            setInterval(() => this.state.save(), 15000); // 低频循环，用于自动保存
+            setInterval(() => { // 可视化更新循环
+                if (document.visibilityState === 'visible') {
+                    const production = this.calculateProduction();
+                    this.chart.update(production);
+                    if (this.state.unlocks['auto-parser-1']) {
+                        this.ast.update(this.state.resources.astNodes);
+                    }
+                }
+            }, 2000);
+        }        /*
+            是什么: 初始化标签页切换系统。
+            为什么: 提供更好的UI组织和用户体验。
+        */
+        initTabSystem() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.getAttribute('data-tab');
+                    
+                    // 移除所有活动状态
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabPanels.forEach(p => {
+                        p.classList.remove('active');
+                        p.style.display = 'none';
+                    });
+                    
+                    // 设置当前活动状态
+                    btn.classList.add('active');
+                    
+                    // 根据data-tab属性查找对应的面板
+                    let targetPanel = null;
+                    if (targetTab === 'upgrades') {
+                        targetPanel = document.getElementById('upgrades-tab');
+                    } else if (targetTab === 'analytics') {
+                        targetPanel = document.getElementById('analytics-tab');
+                    } else if (targetTab === 'stage3') {
+                        targetPanel = document.getElementById('stage3-tab-content');
+                    } else if (targetTab === 'lexer') {
+                        targetPanel = document.getElementById('lexer-tab');
+                    }
+                    
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                        targetPanel.style.display = 'block';
+                        console.log(`切换到标签页: ${targetTab}`);
+                    } else {
+                        console.error(`找不到标签页面板: ${targetTab}`);
+                    }
+                });
+            });
+            
+            // 默认激活升级标签页
+            const defaultTab = document.querySelector('.tab-btn[data-tab="upgrades"]');
+            const defaultPanel = document.getElementById('upgrades-tab');
+            if (defaultTab && defaultPanel) {
+                defaultTab.classList.add('active');
+                defaultPanel.classList.add('active');
+                defaultPanel.style.display = 'block';
+            }
+        }
+
+        /*
+            是什么: 游戏的主循环，以浏览器的刷新率（通常60fps）运行。
+            为什么: 负责计算自上一帧以来经过的时间(delta)，并根据这个时间差来增加资源。这确保了无论帧率如何变化，资源的增长速度都是恒定的、平滑的。
+            如何关联: 这是增量游戏的“心跳”，实现了《研究Level1.md》3.2.2节中描述的“游戏主循环”逻辑，是所有自动化生产的基础。
+        */        gameLoop(timestamp) {
+            const delta = (timestamp - this.lastTick) / 1000;
+            this.lastTick = timestamp;
+
+            const production = this.calculateProduction();
+            this.state.addResource('tokens', production.tokens.mul(delta));
+
+            // AST节点的生产消耗Tokens
+            const astProduction = production.astNodes.mul(delta);
+            if (this.state.resources.tokens.gte(astProduction)) {
+                this.state.resources.tokens = this.state.resources.tokens.sub(astProduction);
+                this.state.addResource('astNodes', astProduction);
+            }
+
+            // 第三阶段生产链
+            if (this.state.unlocks.basicCodeGen) {
+                // 代码生成：AST节点 → 生成代码
+                const generatedCodeProduction = production.generatedCode ? production.generatedCode.mul(delta) : new Decimal(0);
+                if (this.state.resources.astNodes.gte(generatedCodeProduction)) {
+                    this.state.resources.astNodes = this.state.resources.astNodes.sub(generatedCodeProduction);
+                    this.state.addResource('generatedCode', generatedCodeProduction);
+                }
+
+                // 代码优化：生成代码 → 优化代码
+                const optimizedCodeProduction = production.optimizedCode ? production.optimizedCode.mul(delta) : new Decimal(0);
+                if (this.state.resources.generatedCode.gte(optimizedCodeProduction)) {
+                    this.state.resources.generatedCode = this.state.resources.generatedCode.sub(optimizedCodeProduction);
+                    this.state.addResource('optimizedCode', optimizedCodeProduction);
+                }
+
+                // 性能分析：优化代码 → 性能分数
+                const performanceProduction = production.performanceScore ? production.performanceScore.mul(delta) : new Decimal(0);
+                if (this.state.resources.optimizedCode.gte(performanceProduction)) {
+                    this.state.resources.optimizedCode = this.state.resources.optimizedCode.sub(performanceProduction);
+                    this.state.addResource('performanceScore', performanceProduction);
+                    
+                    // 同时更新性能分析器的指标
+                    this.state.performanceAnalyzer.analyzeCode(performanceProduction);
+                }
+            }
+
+            // 只更新最关键的数字统计，避免性能损耗
+            this.UI.updateStats(this.state, production);
+
+            requestAnimationFrame((t) => this.gameLoop(t));
+        }
+
+        /*
+            是什么: 一个较慢的更新循环。
+            为什么: 像升级按钮状态这类UI不需要每秒更新60次。将它们放在一个较慢的循环里可以节省计算资源，提高性能。
+            如何关联: 这是一种常见的游戏开发优化技巧，平衡了UI的响应速度和系统性能。
+        */        slowUpdate() {
+            this.checkUnlocks();
+            this.UI.updateUpgrades(this.state);
+            this.UI.updatePrestige(this.state);
+            this.UI.updateStage3Panels(this.state);
+            
+            // 检查威望可用性
+            if (this.state.unlocks.prestige) {
+                this.state.checkPrestigeAvailability();
+                this.state.checkPrestigeUnlocks();
+            }
+        }
+
+        /*
+            是什么: 计算当前每秒的资源产出量。
+            为什么: 这是游戏自动化引擎的核心计算逻辑。它汇总所有已购买的自动化升级的效果，并计入威望加成。
+            如何关联:
+                - 实现了《实现Level1.md`中的“基础生产公式”和“威望系统”的加成效果。
+                - `totalOutput = info.baseOutput.mul(upgrade.level).mul(prestigeMultiplier)` 这行代码是整个游戏经济系统的核心，体现了线性增长（乘以level）和全局乘数（威望）的结合。
+        */        calculateProduction() {
+            const prestigeMultiplier = this.state.getPrestigeMultiplier();
+            let production = { 
+                tokens: new Decimal(0), 
+                astNodes: new Decimal(0),
+                generatedCode: new Decimal(0),
+                optimizedCode: new Decimal(0),
+                performanceScore: new Decimal(0)
+            };
+
+            // 处理前两阶段升级
+            for (const id in this.state.upgrades) {
+                const upgrade = this.state.upgrades[id];
+                const info = UPGRADE_DATA[id] || STAGE3_UPGRADES[id];
+                if (!info || upgrade.level === 0 || info.type === 'manual') continue;
+
+                let totalOutput = info.baseOutput.mul(upgrade.level).mul(prestigeMultiplier);
+                
+                // 威望升级效果
+                if (PRESTIGE_UPGRADES.quantumTokenizer.level > 0 && info.resource === 'tokens') {
+                    totalOutput = totalOutput.mul(1 + PRESTIGE_UPGRADES.quantumTokenizer.level * 4); // 每级+400%
+                }
+                if (PRESTIGE_UPGRADES.parallelCompiler.level > 0) {
+                    totalOutput = totalOutput.mul(1 + PRESTIGE_UPGRADES.parallelCompiler.level * 1); // 每级+100%
+                }
+                if (PRESTIGE_UPGRADES.aiOptimizer.level > 0) {
+                    totalOutput = totalOutput.mul(1 + PRESTIGE_UPGRADES.aiOptimizer.level * 2); // 每级+200%
+                }
+
+                if (info.type === 'generator') {
+                    production[info.resource] = production[info.resource].add(totalOutput);
+                } else if (info.type === 'converter') {
+                    production[info.resource] = production[info.resource].add(totalOutput);
+                }
+            }
+
+            // 第三阶段特殊生产计算
+            if (this.state.unlocks.basicCodeGen) {
+                // 代码优化倍数应用
+                const optimizationMultiplier = this.state.codeOptimizer.getOptimizationMultiplier();
+                if (production.generatedCode.gt(0)) {
+                    production.optimizedCode = production.generatedCode.mul(0.1).mul(optimizationMultiplier);
+                }
+
+                // 性能分析平台倍数应用
+                const platformMultiplier = DEPLOYMENT_PLATFORMS[this.state.performanceAnalyzer.currentPlatform].multiplier;
+                if (production.optimizedCode.gt(0)) {
+                    production.performanceScore = production.optimizedCode.mul(0.1).mul(platformMultiplier);
+                }
+            }
+
+            return production;
+        }
+
+        /*
+            是什么: 检查是否满足解锁新功能或新升级的条件。
+            为什么: 控制游戏节奏，逐步向玩家引入新机制，避免信息过载。
+            如何关联: 这是《研究Level1.md`1.4节中提到的“展开式设计”的具体实现，是引导玩家、保持长期吸引力的关键。
+        */        checkUnlocks() {
+            const tokenCount = this.state.prestige.totalTokensAllTime;
+            const astNodeCount = this.state.resources.astNodes;
+            
+            // 检查前两阶段解锁
+            for (const id in UPGRADE_DATA) {
+                const info = UPGRADE_DATA[id];
+                if (info.unlockThreshold && !this.state.unlocks[id]) {
+                    if (tokenCount.gte(info.unlockThreshold)) {
+                        this.state.unlocks[id] = true;
+                    }
+                }
+            }
+
+            // 检查第三阶段解锁
+            for (const id in STAGE3_UPGRADES) {
+                const info = STAGE3_UPGRADES[id];
+                if (info.unlockThreshold && !this.state.unlocks[id]) {
+                    if (astNodeCount.gte(info.unlockThreshold)) {
+                        this.state.unlocks[id] = true;
+                        console.log(`第三阶段解锁: ${info.name}`);
+                    }
+                }
+            }
+
+            // 威望解锁
+            if (!this.state.unlocks.prestige && tokenCount.gte(1e6)) {
+                this.state.unlocks.prestige = true;
+            }
+        }
+
+        /*
+            是什么: 玩家手动执行词法分析的操作。
+            为什么: 这是游戏初期的主要互动方式，构成了“行动 -> 资源”的核心循环。
+            如何关联: 实现了《研究Level1.md`1.1节“原始循环”中的“行动”部分。玩家通过这个操作获得第一批资源（Tokens）。
+        */        runLexer() {
+            const code = document.getElementById('code-input').value || `function hello() {
+    return "Hello World!";
+}`;
+            const tokens = this.tokenizer.tokenize(code);
+            this.UI.displayTokens(tokens);
+
+            const manualUpgrade = this.state.upgrades['token-speed'];
+            const baseGain = new Decimal(tokens.length);
+            const bonus = baseGain.mul(UPGRADE_DATA['token-speed'].baseOutput).mul(manualUpgrade.level);
+            const totalGain = baseGain.add(bonus);
+
+            this.state.addResource('tokens', totalGain);
+        }
+
+        /*
+            是什么: 处理购买升级的逻辑。
+            为什么: 这是“资源 -> 升级”的核心循环，玩家消耗资源来增强他们的生产能力。
+            如何关联:
+                - 实现了《研究Level1.md`1.1节“原始循环”中的“升级”部分。
+                - 成本计算 `cost = info.baseCost.times(Decimal.pow(info.growth, upgradeState.level))` 是“指数增长”成本公式的直接应用。
+        */        /*
+            是什么: 设置购买数量。
+            为什么: 允许玩家选择一次购买1个、10个或100个升级，提高后期游戏效率。
+        */
+        setBuyAmount(amount) {
+            this.buyAmount = amount;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.buy-amount-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.getAttribute('data-amount')) === amount) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        /*
+            是什么: 计算批量购买的总成本。
+            为什么: 处理指数增长的成本计算，确保批量购买的准确性。
+        */
+        calculateBulkCost(baseCost, growth, currentLevel, amount) {
+            let totalCost = new Decimal(0);
+            for (let i = 0; i < amount; i++) {
+                const levelCost = baseCost.times(Decimal.pow(growth, currentLevel + i));
+                totalCost = totalCost.add(levelCost);
+            }
+            return totalCost;
+        }
+
+        buyUpgrade(id) {
+            const info = UPGRADE_DATA[id];
+            const upgradeState = this.state.upgrades[id];
+            const costResource = info.costResource || 'tokens';
+            
+            // 计算批量购买的总成本
+            const totalCost = this.calculateBulkCost(info.baseCost, info.growth, upgradeState.level, this.buyAmount);
+            
+            if (this.state.resources[costResource].gte(totalCost)) {
+                this.state.resources[costResource] = this.state.resources[costResource].sub(totalCost);
+                upgradeState.level += this.buyAmount;
+            }
+        }/*
+            是什么: 购买威望专属升级的方法。
+            为什么: 威望升级使用编译器点数作为货币，提供强力的永久性加成。
+            如何关联: 实现威望系统的深度内容，给玩家更多长期目标。
+        */
+        buyPrestigeUpgrade(id) {
+            const info = PRESTIGE_UPGRADES[id];
+            const cost = info.baseCost.times(Decimal.pow(1.5, info.level));
+
+            if (this.state.prestige.compilerPoints.gte(cost)) {
+                this.state.prestige.compilerPoints = this.state.prestige.compilerPoints.sub(cost);
+                info.level++;
+                info.cost = info.baseCost.times(Decimal.pow(1.5, info.level));
+            }
+        }        /*
+            是什么: 购买第三阶段升级的方法（支持批量购买）。
+            为什么: 处理代码生成相关的升级购买，使用AST节点作为货币，支持x1/x10/x100批量购买。
+            如何关联: 实现第三阶段的核心交互循环。
+        */
+        buyStage3Upgrade(id) {
+            const info = STAGE3_UPGRADES[id];
+            const upgradeState = this.state.upgrades[id];
+            const costResource = info.costResource || 'astNodes';
+            const totalCost = this.calculateBulkCost(info.baseCost, info.growth, upgradeState.level, this.buyAmount);
+
+            if (this.state.resources[costResource].gte(totalCost)) {
+                this.state.resources[costResource] = this.state.resources[costResource].sub(totalCost);
+                upgradeState.level += this.buyAmount;
+                
+                // 特殊处理：更新代码生成器模板
+                if (id === 'llvmCodeGen') {
+                    this.state.codeGenerator.upgradeTemplate('llvm');
+                } else if (id === 'jitCodeGen') {
+                    this.state.codeGenerator.upgradeTemplate('jit');
+                }
+            }
+        }        /*
+            是什么: 购买优化技术升级（支持批量购买）。
+            为什么: 允许玩家投资于各种编译器优化技术，提升代码质量，支持x1/x10/x100批量购买。
+            如何关联: 实现第三阶段优化技术树的核心交互。
+        */
+        buyOptimization(techKey) {
+            const tech = OPTIMIZATION_TECHS[techKey];
+            const currentData = this.state.codeOptimizer.optimizations[techKey];
+            
+            // 计算能够购买的数量（不超过批量购买设置和剩余可购买等级）
+            const maxLevels = tech.maxLevel - currentData.level;
+            const actualAmount = Math.min(this.buyAmount, maxLevels);
+            
+            if (actualAmount <= 0) return;
+            
+            // 计算批量购买的总成本
+            let totalCost = new Decimal(0);
+            let tempLevel = currentData.level;
+            for (let i = 0; i < actualAmount; i++) {
+                const levelCost = tech.baseCost.mul(Decimal.pow(tech.growth, tempLevel));
+                totalCost = totalCost.plus(levelCost);
+                tempLevel++;
+            }
+              if (this.state.resources.generatedCode.gte(totalCost)) {
+                this.state.resources.generatedCode = this.state.resources.generatedCode.sub(totalCost);
+                currentData.level += actualAmount;
+                currentData.cost = tech.baseCost.mul(Decimal.pow(tech.growth, currentData.level));
+                console.log(`优化技术升级: ${tech.name} (+${actualAmount}级)`);
+                
+                // 立即保存优化技术升级
+                this.state.save();
+            }
+        }        /*
+            是什么: 切换部署平台。
+            为什么: 允许玩家选择不同的部署环境以获得不同的性能倍数。
+            如何关联: 实现第三阶段性能分析系统的平台管理。
+        */
+        switchDeploymentPlatform(platform) {
+            if (this.state.performanceAnalyzer.deployTo(platform)) {
+                console.log(`切换到部署平台: ${DEPLOYMENT_PLATFORMS[platform].name}`);
+                // 重新计算生产力以应用新平台倍数
+                this.calculateProduction();
+                // 立即保存以确保平台切换被记录
+                this.state.save();
+                console.log(`部署平台已切换为: ${platform}, 并已保存`);
+            }
+        }
+
+        /*
+            是什么: 执行威望重置。
+            为什么: 允许玩家重置游戏以换取永久性加成，这是应对后期游戏进程放缓、提供长期目标的经典增量游戏机制。
+            如何关联: 实现了《研究Level1.md`2.4节和《实现Level1.md`“威望系统设计”中定义的完整威望循环：检查收益、确认、重置状态、保存。
+        */
+        prestige() {
+            const gain = this.state.calculatePrestigeGain();
+            if (gain.gt(0)) {                // 在真实游戏中，应该使用自定义的模态框(modal)替代confirm()，以获得更好的样式和用户体验。
+                if(confirm(`您确定要重构编译器吗？\n\n这将重置您当前的升级和资源，以换取 ${gain.toFixed()} 个永久性的编译器点数加成。`)){
+                    this.state.performPrestige();
+                    this.state.save();
+                    this.ast.update(new Decimal(0));
+                }
+            }
+        }
+
+        /*
+            开发者后门方法
+        */
+        toggleDevMode() {
+            this.devMode = !this.devMode;
+            if (this.devMode) {
+                console.log('🎮 开发者模式已激活！');                
+                console.log('🎮 快捷键：');
+                console.log('🎮   1 - 获得100万tokens');
+                console.log('🎮   2 - 获得1000万tokens');
+                console.log('🎮   3 - 获得100编译器点数');
+                console.log('🎮   4 - 解锁所有升级');
+                console.log('🎮   5 - 增加5次威望次数');
+                console.log('🎮   6 - 快速解锁第三阶段');
+                console.log('🎮   7 - 添加第三阶段资源');
+                console.log('🎮   0 - 重置游戏');
+                
+                // 在页面上显示开发者模式指示器
+                if (!document.getElementById('dev-indicator')) {
+                    const indicator = document.createElement('div');
+                    indicator.id = 'dev-indicator';
+                    indicator.style.cssText = `
+                        position: fixed;
+                        top: 10px;
+                        right: 10px;
+                        background: linear-gradient(45deg, #ff0000, #ff6600);
+                        color: white;
+                        padding: 8px 12px;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        font-size: 12px;
+                        z-index: 9999;
+                        box-shadow: 0 0 10px rgba(255,0,0,0.5);
+                        animation: pulse 2s infinite;
+                    `;
+                    indicator.textContent = '🎮 DEV MODE';
+                    document.body.appendChild(indicator);
+                    
+                    // 添加脉冲动画
+                    if (!document.getElementById('dev-style')) {
+                        const style = document.createElement('style');
+                        style.id = 'dev-style';
+                        style.textContent = `
+                            @keyframes pulse {
+                                0%, 100% { opacity: 1; transform: scale(1); }
+                                50% { opacity: 0.7; transform: scale(1.05); }
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                }
+            } else {
+                console.log('🎮 开发者模式已关闭');
+                const indicator = document.getElementById('dev-indicator');
+                if (indicator) indicator.remove();
+            }
+        }
+    }
+
+    // --- 启动游戏 ---
+    /*
+        是什么: 游戏启动入口。
+        为什么: 使用 `window.onload` 确保在所有HTML元素和资源都加载完毕后才开始执行游戏初始化逻辑，避免因元素未找到而产生的错误。
+        如何关联: 这是整个程序的起点。
+    */
+    let game;
+    window.onload = () => {
+        game = new Game();
+        game.init();
+    };
+</script>
+</body>
+</html>
