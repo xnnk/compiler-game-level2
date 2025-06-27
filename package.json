@@ -3,6 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "license": "MIT",
+  "author": "xnnk",
+  "description": "A compiler simulation incremental game with machine learning features",
+  "keywords": ["game", "incremental", "compiler", "simulation", "machine-learning"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xnnk/compiler-game-level2.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
