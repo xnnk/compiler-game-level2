@@ -1,13 +1,189 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<!DOCTYPE html>
+<!--
+    是什么: HTML文档的根元素，语言设置为中文。
+    为什么: 声明这是一个HTML5文档，并指定主要语言为中文，有助于浏览器和搜索引擎正确解析。
+    如何关联: 这是整个项目的入口和骨架，承载了《实现Level1.md》中规划的所有前端技术和UI布局。
+-->
+<html lang="zh-CN">
+<head>
+    <!--
+        是什么: 文档元数据部分。
+        为什么: 定义字符集、视口设置和页面标题，确保跨设备正确显示和响应式布局。
+        如何关联: `viewport` 设置是移动端优先和响应式设计的基石，符合现代Web开发标准。
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码编译器模拟器 v0.8.0</title>
+
+    <!--
+        是什么: 引入外部JavaScript库。
+        为什么:
+            - tailwindcss: 用于快速构建UI，实现现代化的原子化CSS布局。
+            - d3.js: 一个强大的数据可视化库，用于绘制抽象语法树(AST)。
+            - chart.js: 用于创建动态的性能图表。
+            - decimal.js: 用于处理大数运算，防止JavaScript原生Number类型的精度丢失问题。
+        如何关联:
+            - 这完全对应了《实现Level1.md》中"核心库选择"部分的技术栈规划。
+            - `decimal.js` 的使用是为了解决《研究Level1.md》中提到的"指数增长"带来的"天文数字"问题。
+    -->
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/decimal.js/decimal.min.js"></script>
+
+    <!--
+        是什么: 引入CodeMirror代码编辑器库及其相关CSS。
+        为什么: 提供一个功能强大的、带语法高亮的嵌入式代码编辑器，让玩家可以输入和查看代码。
+        如何关联: 这是实现《研究Level1.md》3.3.3节"游戏内代码编辑器"和《实现Level1.md》"代码编辑器"功能点的直接技术选型。
+    -->
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+
+    <!--
+        是什么: 引入外部字体 'IBM Plex Mono'。
+        为什么: 使用等宽字体来强化"编程"和"黑客"的主题感，这在代码编辑器和终端模拟中很常见。
+        如何关联: 对应《研究Level1.md》3.3.1节中提到的"广泛使用等宽字体（Monospace）"的UI设计建议。
+    -->
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- 主样式文件 -->
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body class="p-4 md:p-8">
+
+<!--
+    是什么: 页面主体结构，采用Grid布局。
+    为什么: 使用Grid布局可以轻松实现复杂的响应式页面结构，在大屏幕上分为左右两栏，在小屏幕上自动堆叠。
+    如何关联: 这是《实现Level1.md》中"仪表盘布局"的宏观实现，将页面划分为左侧的交互区（编辑器）和右侧的状态/升级区。
+-->
+<div class="max-w-7xl mx-auto">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold glitch" data-text="代码编译器模拟器">代码编译器模拟器</h1>
+        <p id="version-display" class="text-sm text-gray-400 mt-2">v0.8.0 - Modular Architecture</p>
+    </header>
+
+    <main class="space-y-6">
+        <!-- 主要状态面板 - 始终可见 -->
+        <div class="hacker-box p-6">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">🖥️ 编译器状态</h2>
+            <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+        </div>
+
+        <!-- 威望面板 - 独立显示 -->
+        <div class="hacker-box p-6 hidden" id="prestige-panel">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">⚡ 系统重构 (威望)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                    <p class="text-sm text-gray-400 mb-2">重构编译器核心以获得永久性加成</p>
+                    <p class="text-lg">可获得 <span id="prestige-gain-display" class="font-bold text-yellow-400">0</span> 编译器点数</p>
+                </div>
+                <button id="prestige-btn" class="btn btn-secondary">执行重构</button>
+            </div>
+        </div>
+
+        <!-- 标签页导航 -->
+        <div class="hacker-box p-6">
+            <div class="tab-navigation mb-6">
+                <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+                    <button class="tab-btn active" data-tab="upgrades">🔧 升级</button>
+                    <button class="tab-btn" data-tab="analytics">📊 分析</button>
+                    <button class="tab-btn" data-tab="stage3" id="stage3-tab">🚀 代码生成</button>
+                    <button class="tab-btn" data-tab="lexer">⚙️ 词法分析</button>
+                </div>
+            </div>
+
+            <!-- 标签页内容 -->
+            <div class="tab-content">
+                <!-- 升级标签页 -->
+                <div id="upgrades-tab" class="tab-panel active">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">编译器升级</h2>
+                        <div class="buy-amount-selector">
+                            <span class="text-sm text-gray-400 mr-2">购买数量:</span>
+                            <button class="buy-amount-btn active" data-amount="1" onclick="game.setBuyAmount(1)">x1</button>
+                            <button class="buy-amount-btn" data-amount="10" onclick="game.setBuyAmount(10)">x10</button>
+                            <button class="buy-amount-btn" data-amount="100" onclick="game.setBuyAmount(100)">x100</button>
+                        </div>
+                    </div>
+                    <div id="upgrades-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2"></div>
+                </div>
+
+                <!-- 分析标签页 -->
+                <div id="analytics-tab" class="tab-panel">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h2 class="text-xl font-bold mb-4">性能图表</h2>
+                            <div class="relative h-64">
+                                <canvas id="performance-chart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold mb-4">抽象语法树 (AST)</h2>
+                            <div id="ast-visualization" class="w-full h-64 flex items-center justify-center border border-gray-600 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第三阶段标签页 -->
+                <div id="stage3-tab-content" class="tab-panel hidden">
+                    <h2 class="text-xl font-bold mb-4">🔧 代码生成工厂</h2>
+                    <div class="space-y-6">
+                        <!-- 代码生成流水线 -->
+                        <div class="assembly-line bg-gray-800 p-4 rounded">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                <div id="code-generation-status"></div>
+                            </div>
+                        </div>
+
+                        <!-- 优化和性能面板 -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div id="optimization-panel"></div>
+                            <div id="deployment-panel"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 词法分析标签页 - 保留但简化 -->
+                <div id="lexer-tab" class="tab-panel">
+                    <h2 class="text-xl font-bold mb-4">词法分析器</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">输入代码</label>
+                                <textarea id="code-input" rows="6" class="w-full p-3 bg-gray-900 border border-gray-600 rounded text-gray-300 font-mono text-sm" placeholder="function hello() {
+    return &quot;Hello World!&quot;;
+}">function hello() {
+    return "Hello World!";
+}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">令牌输出</label>
+                                <div id="token-stream" class="h-32 bg-gray-900 border border-gray-600 rounded p-3 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                        <button id="run-lexer-btn" class="btn btn-primary">🔍 执行词法分析</button>
+                        <p class="text-xs text-gray-500">💡 提示：词法分析主要用于游戏早期获取tokens，后期自动化升级后作用有限</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 开发者提示 - 只在控制台可见 -->
+    <script>
+        console.log('🎮 开发者提示：');
+        console.log('🎮 按 Ctrl + Shift + D 激活开发者模式');
+        console.log('🎮 激活后可以使用数字键快速获得资源');
+    </script>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
 </html>

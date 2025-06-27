@@ -1,96 +1,327 @@
+/*
+    是什么: 定义全局CSS变量（自定义属性）。
+    为什么: 将颜色、字体等设计元素集中管理，方便统一修改和维护，实现主题化。
+    如何关联: 这里的颜色变量（如--accent-green, --accent-cyan）直接实现了《实现Level1.md》中"黑客美学风格指南"定义的色板。
+*/
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --border-color: #30363d;
+    --accent-green: #23d18b;
+    --accent-cyan: #39c5fe;
+    --accent-magenta: #f778ba;
+    --text-primary: #c9d1d9;
+    --text-secondary: #8b949e;
+    --font-mono: 'IBM Plex Mono', monospace;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/*
+    是什么: 基础页面样式。
+    为什么: 设置全局字体、背景色和文字颜色，奠定整体视觉风格。
+    如何关联: 应用了《实现Level1.md》中定义的"黑客美学"字体和背景色。
+*/
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+    font-family: var(--font-mono);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    margin: 0;
+    min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.hacker-box {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
 }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+    cursor: pointer;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.btn-primary {
+    background-color: var(--accent-green);
+    color: var(--bg-primary);
+    border-color: var(--accent-green);
+    box-shadow: 0 0 10px rgba(35, 209, 139, 0.4);
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(35, 209, 139, 0.7);
 }
-.logo.vanilla:hover {
-  filter: drop-shadow(0 0 2em #f7df1eaa);
+.btn-primary:disabled {
+    background-color: #21262d;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    box-shadow: none;
 }
-
-.card {
-  padding: 2em;
+.btn-secondary {
+    background-color: var(--accent-cyan);
+    color: var(--bg-primary);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(57, 197, 254, 0.4);
 }
-
-.read-the-docs {
-  color: #888;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(57, 197, 254, 0.7);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* 第三阶段专属样式 */
+.btn-mini {
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+}
+
+.optimization-tech {
+    transition: all 0.3s ease;
+}
+.optimization-tech:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.deployment-platform {
+    transition: all 0.3s ease;
+}
+.deployment-platform:hover:not(.opacity-50) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* 第三阶段面板渐变背景 */
+.stage3-panel {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(75, 0, 130, 0.1) 100%);
+    border: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+/* 性能评级样式 */
+.performance-rating {
+    text-shadow: 0 0 10px currentColor;
+    animation: pulse-rating 2s infinite;
+}
+@keyframes pulse-rating {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* 标签页样式 */
+.tab-navigation {
+    margin-bottom: 1.5rem;
+}
+.tab-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: rgba(55, 65, 81, 0.8);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+.tab-btn:hover {
+    background: rgba(75, 85, 99, 0.9);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+    color: var(--bg-primary);
+    box-shadow: 0 0 15px rgba(57, 197, 254, 0.4);
+}
+.tab-panel {
+    display: none;
+    animation: fadeInTab 0.3s ease-in-out;
+}
+.tab-panel.active {
+    display: block;
+}
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 改进的网格布局 */
+#stats-container {
+    display: grid;
+    gap: 1rem;
+}
+.stat-item {
+    background: rgba(55, 65, 81, 0.3);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+.stat-item:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(57, 197, 254, 0.2);
+}
+
+/* 是什么: "故障艺术" (Glitch) 效果的CSS实现。
+    为什么: 这是一种非常流行的视觉风格，能极大地增强"黑客"或"赛博朋克"的主题感，让UI看起来更"酷"。
+    如何关联: 直接实现了《实现Level1.md》中"UI/UX 设计规范"里展示的`.glitch` CSS代码，是"黑客美学"的关键组成部分。
+*/
+.glitch {
+    position: relative;
+    color: var(--accent-green);
+    text-shadow: 0 0 5px var(--accent-green);
+}
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    overflow: hidden;
+}
+.glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 var(--accent-magenta);
+    animation: glitch-anim-1 2s infinite linear alternate-reverse;
+}
+.glitch::after {
+    left: -2px;
+    text-shadow: -2px 0 var(--accent-cyan), 2px 2px var(--accent-magenta);
+    animation: glitch-anim-2 2s infinite linear alternate-reverse;
+}
+@keyframes glitch-anim-1 { 0% { clip-path: inset(5% 0 90% 0); } 100% { clip-path: inset(80% 0 5% 0); } }
+@keyframes glitch-anim-2 { 0% { clip-path: inset(70% 0 10% 0); } 100% { clip-path: inset(10% 0 85% 0); } }
+
+/* 是什么: CodeMirror编辑器的样式覆盖。
+    为什么: 为了让CodeMirror的默认外观能更好地融入我们自定义的"黑客"主题。
+    如何关联: 调整编辑器样式以匹配《实现Level1.md》中定义的整体视觉风格。
+*/
+.CodeMirror {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    height: 250px;
+    font-family: var(--font-mono);
+}
+.CodeMirror-gutters {
+    background: #282a36 !important; /* Dracula theme background */
+}
+
+/* 是什么: 词法分析后生成的"令牌"(Token)的可视化样式。
+    为什么: 通过不同颜色区分不同类型的Token（关键字、标识符等），为玩家提供清晰、直观的视觉反馈。
+    如何关联: 这是实现《实现Level1.md》中"阶段一：词法分析"里提到的"代码字符串逐个分解为彩色token块"的可视化效果。
+*/
+#token-stream {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    min-height: 100px;
+}
+.token {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.token-KEYWORD { background-color: #ff79c6; color: black; }
+.token-IDENTIFIER { background-color: #f8f8f2; color: black; }
+.token-NUMBER { background-color: #f1fa8c; color: black; }
+.token-STRING { background-color: #50fa7b; color: black; }
+.token-OPERATOR { background-color: #8be9fd; color: black; }
+.token-DELIMITER { background-color: #bd93f9; color: black; }
+.token-UNKNOWN { background-color: #ff5555; color: white; }
+
+/* 威望弹窗样式 */
+.prestige-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.5s ease;
+}
+
+.prestige-popup-content {
+    background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+    border: 3px solid var(--accent-green);
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 0 50px var(--accent-green);
+    font-family: var(--font-mono);
+}
+
+.prestige-summary {
+    margin: 20px 0;
+    color: var(--text-primary);
+}
+
+.prestige-summary p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.close-btn {
+    background: var(--accent-green);
+    color: var(--bg-primary);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: var(--font-mono);
+    transition: all 0.3s ease;
+}
+.close-btn:hover {
+    background: var(--accent-cyan);
+    transform: scale(1.05);
+}
+
+/* 购买数量选择器样式 */
+.buy-amount-selector {
+    display: flex;
+    align-items: center;
+}
+.buy-amount-btn {
+    padding: 0.5rem 1rem;
+    margin: 0 2px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.buy-amount-btn:hover {
+    border-color: var(--accent-cyan);
+    color: var(--text-primary);
+}
+.buy-amount-btn.active {
+    background: var(--accent-cyan);
+    color: var(--bg-primary);
+    border-color: var(--accent-cyan);
+}
+
+/* 隐藏样式 - 替代内联样式 */
+.hidden {
+    display: none;
 }
