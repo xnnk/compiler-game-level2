@@ -369,7 +369,7 @@ const example = "formatted code";
 ```
 
 ## 相关链接
-- [相关文档](link)
+- [相关文档]([link](https://github.com/xnnk/compiler-game-level2/tree/master/docs))
 ```
 
 ## 🐛 Issue 报告
